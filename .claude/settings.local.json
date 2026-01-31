@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(head:*)",
+      "Bash(npx next lint:*)",
+      "Bash(npm run lint:*)",
+      "Bash(pnpm tsx:*)",
+      "Bash(pnpm add:*)",
+      "Bash(npx tsc:*)",
+      "Bash(tail:*)",
+      "Bash(dir:*)",
+      "Bash(npm run dev:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run db:generate:*)",
+      "Bash(npm run db:migrate:*)",
+      "Bash(npm run db:push:*)",
+      "Bash(npx drizzle-kit:*)",
+      "Bash(npm run build:*)",
+      "Bash(wc:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm db:push:*)",
+      "Bash(ls:*)",
+      "Bash(npm install:*)",
+      "Bash(npm ls:*)",
+      "Bash(git push:*)",
+      "Bash(git config:*)",
+      "Bash(cmdkey /delete:git:https://github.com)",
+      "Bash(cmdkey /delete:*)",
+      "Bash(ssh:*)",
+      "Bash(del nul)"
+    ]
+  }
+}

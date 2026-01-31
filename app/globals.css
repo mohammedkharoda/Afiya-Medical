@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* ===== Afiya Wellness Light Theme ===== */
+
+    --background: 40 33% 96%; /* Warm Ivory */
+    --foreground: 0 0% 18%; /* Charcoal */
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 18%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 18%;
+
+    --primary: 186 41% 32%; /* Deep Teal */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 247 33% 83%; /* Soft Lavender */
+    --secondary-foreground: 0 0% 18%;
+
+    --accent: 43 47% 57%; /* Brushed Gold */
+    --accent-foreground: 0 0% 18%;
+
+    --muted: 210 20% 94%;
+    --muted-foreground: 0 0% 48%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 16% 90%;
+    --input: 210 16% 90%;
+    --ring: 186 41% 32%;
+
+    --radius: 1rem;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-gt-walsheim), system-ui, sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-gt-walsheim), system-ui, sans-serif;
+    font-weight: 700;
+  }
+}
