@@ -42,10 +42,15 @@ export async function POST(req: NextRequest) {
 
     const now = new Date();
 
-    // Find verification record in database
-    const ver = await db.query.verifications.findFirst({
+    // Find all verification records for this phone and filter for OTP records
+    // OTP records have identifier=phone and value=6-digit code (not starting with +)
+    const verRecords = await db.query.verifications.findMany({
       where: eq(verifications.identifier, phoneE164),
     });
+
+    // Filter to find the actual OTP record (value is 6 digits, not a phone number)
+    const ver = verRecords.find((r) => /^\d{6}$/.test(r.value));
+
     if (!ver)
       return NextResponse.json(
         { success: false, message: "Verification code not found" },

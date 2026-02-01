@@ -99,6 +99,11 @@ export async function POST(req: NextRequest) {
       hasCompletedMedicalHistory: false,
     });
 
+    // Clean up any old verification records for this phone before creating new ones
+    await db
+      .delete(verifications)
+      .where(eq(verifications.identifier, phoneE164));
+
     // Generate OTP and save to verifications table (phone-based verification)
     const otp = String(Math.floor(100000 + Math.random() * 900000)); // 6-digit
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes

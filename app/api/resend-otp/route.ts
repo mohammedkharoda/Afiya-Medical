@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, verifications, users } from "@/lib/db";
-import { eq, gt } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { sendOtpEmail } from "@/lib/email";
 
@@ -36,10 +36,12 @@ export async function POST(req: NextRequest) {
     phoneE164 = parsed.format("E.164");
 
     // Rate-limit: don't resend if an OTP was created within the last 60 seconds
+    // Only check OTP records (6-digit codes), not token records
     const recentRows = await db.query.verifications.findMany({
       where: eq(verifications.identifier, phoneE164),
     });
-    const recent = recentRows.sort(
+    const otpRecords = recentRows.filter((r) => /^\d{6}$/.test(r.value));
+    const recent = otpRecords.sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     )[0];
@@ -56,6 +58,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Delete old OTP records for this phone (keep token records)
+    for (const rec of otpRecords) {
+      await db.delete(verifications).where(eq(verifications.id, rec.id));
+    }
+
     // Generate new OTP, store and (sending handled by register logic or here)
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
@@ -64,14 +71,26 @@ export async function POST(req: NextRequest) {
       .insert(verifications)
       .values({ identifier: phoneE164, value: otp, expiresAt });
 
-    // Get user email from database and send OTP via email
+    // Get user email from database - prioritize unverified user (the one who just registered)
     try {
-      const user = await db.query.users.findFirst({
-        where: eq(users.phone, phoneE164),
+      // First try to find unverified user with this phone
+      let user = await db.query.users.findFirst({
+        where: and(eq(users.phone, phoneE164), eq(users.isVerified, false)),
         columns: { email: true },
       });
 
+      // Fallback: if no unverified user, find any user with this phone
+      if (!user) {
+        user = await db.query.users.findFirst({
+          where: eq(users.phone, phoneE164),
+          columns: { email: true },
+        });
+      }
+
       if (user?.email) {
+        console.log(
+          `Sending resend OTP to ${user.email} for phone ${phoneE164}`,
+        );
         await sendOtpEmail(user.email, otp);
       } else {
         console.log(`Resent OTP for ${phoneE164}: ${otp} (no email found)`);
