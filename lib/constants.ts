@@ -36,6 +36,29 @@ export const NOTIFICATION_MESSAGES = {
 
   PAYMENT_RECEIVED: (amount: string) =>
     `Payment of ${amount} received. Thank you!`,
+
+  // Approval workflow messages
+  APPOINTMENT_PENDING_PATIENT: (date: string, time: string) =>
+    `Your appointment request for ${date} at ${time} is pending doctor approval. You will be notified once approved.`,
+
+  APPOINTMENT_APPROVAL_NEEDED: (
+    patientName: string,
+    date: string,
+    time: string,
+  ) =>
+    `New appointment request from ${patientName} for ${date} at ${time}. Please approve or decline.`,
+
+  APPOINTMENT_APPROVED: (date: string, time: string) =>
+    `Great news! Your appointment for ${date} at ${time} has been confirmed by the doctor.`,
+
+  APPOINTMENT_DECLINED: (date: string, time: string) =>
+    `Your appointment request for ${date} at ${time} was declined. Please book a different time.`,
+
+  APPOINTMENT_CANCELLED_BY_PATIENT: (
+    patientName: string,
+    date: string,
+    time: string,
+  ) => `${patientName} has cancelled their appointment on ${date} at ${time}.`,
 };
 
 // Email Subjects

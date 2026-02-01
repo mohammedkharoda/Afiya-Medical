@@ -39,7 +39,19 @@ interface Payment {
   paymentMethod: string;
   paidAt: string | null;
   createdAt: string;
-  appointment?: Appointment;
+  appointment?: {
+    id: string;
+    appointmentDate: string;
+    appointmentTime: string;
+    status: string;
+    paymentStatus: string;
+    symptoms?: string;
+    patient?: {
+      user?: {
+        name?: string;
+      };
+    };
+  };
 }
 
 // Standard consultation fee - could be fetched from settings later
@@ -88,6 +100,11 @@ export default function PaymentsPage() {
     .filter((p) => p.status === "PAID")
     .reduce((sum, p) => sum + p.amount, 0);
 
+  // Pending payments (not yet paid)
+  const totalPending = payments
+    .filter((p) => p.status === "PENDING")
+    .reduce((sum, p) => sum + p.amount, 0);
+
   // Pending appointments (scheduled and not cancelled, payment not yet paid)
   const pendingAppointments = appointments.filter(
     (a) => a.status === "SCHEDULED" && a.paymentStatus === "PENDING",
@@ -126,7 +143,7 @@ export default function PaymentsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Total Paid / Earnings Card */}
         <Card className="border-green-200 bg-green-50/50">
           <CardContent className="pt-6">
@@ -145,6 +162,27 @@ export default function PaymentsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Pending Payments Card */}
+        {totalPending > 0 && (
+          <Card className="border-amber-200 bg-amber-50/50">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+                  <Clock className="h-6 w-6 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-amber-600">
+                    {isDoctor ? "Pending Collection" : "Pending Payment"}
+                  </p>
+                  <p className="text-2xl font-bold text-amber-700">
+                    ₹{totalPending.toLocaleString("en-IN")}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Doctor-Only: Pending Payment & Consultation Fee (Optional, hidden for now based on user request to simplify) */}
         {/* User request: "the consult fee need to be remove" - implying generally remove it or hide it. 
@@ -211,6 +249,11 @@ export default function PaymentsPage() {
                     <div>
                       <p className="font-medium text-foreground">
                         ₹{payment.amount.toLocaleString("en-IN")}
+                        {payment.appointment?.patient?.user?.name && (
+                          <span className="font-normal text-muted-foreground ml-2">
+                            — {payment.appointment.patient.user.name}
+                          </span>
+                        )}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         <Calendar className="mr-1 inline h-3 w-3" />
@@ -218,12 +261,6 @@ export default function PaymentsPage() {
                           ? formatDate(payment.paidAt)
                           : formatDate(payment.createdAt)}
                       </p>
-                      {/* Show Patient Name for Doctor */}
-                      {isDoctor && payment.appointment?.patient?.user?.name && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Patient: {payment.appointment.patient.user.name}
-                        </p>
-                      )}
                     </div>
                   </div>
                   <div className="text-right">

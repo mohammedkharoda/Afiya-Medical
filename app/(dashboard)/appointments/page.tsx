@@ -105,17 +105,22 @@ export default function AppointmentsPage() {
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<{
+    id: string;
+    action: string;
+  } | null>(null);
   const [selectedAppointment, setSelectedAppointment] =
     useState<Appointment | null>(null);
   const [dialogType, setDialogType] = useState<
     | "prescription"
     | "cancel"
+    | "decline"
+    | "patient_cancel"
     | "reschedule"
     | "payment"
     | "view_prescription"
     | null
-  >(null); // TODO: Change back to null after testing
+  >(null);
   const [notes, setNotes] = useState("");
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("");
@@ -163,18 +168,20 @@ export default function AppointmentsPage() {
         data.appointments?.length,
       );
       if (response.ok) {
-        // Sort appointments: SCHEDULED first, then by date (recent first)
+        // Sort appointments: PENDING first (for doctors), then by date (recent first)
         const sortedAppointments = [...(data.appointments || [])].sort(
           (a, b) => {
-            // Status priority: SCHEDULED > RESCHEDULED > COMPLETED > CANCELLED
+            // Status priority: PENDING > SCHEDULED > RESCHEDULED > COMPLETED > CANCELLED > DECLINED
             const statusOrder: Record<string, number> = {
-              SCHEDULED: 0,
-              RESCHEDULED: 1,
-              COMPLETED: 2,
-              CANCELLED: 3,
+              PENDING: 0,
+              SCHEDULED: 1,
+              RESCHEDULED: 2,
+              COMPLETED: 3,
+              CANCELLED: 4,
+              DECLINED: 5,
             };
             const statusDiff =
-              (statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4);
+              (statusOrder[a.status] ?? 6) - (statusOrder[b.status] ?? 6);
             if (statusDiff !== 0) return statusDiff;
 
             // Within same status, sort by date (most recent first)
@@ -276,7 +283,7 @@ export default function AppointmentsPage() {
       return;
     }
 
-    setActionLoading(selectedAppointment.id);
+    setActionLoading({ id: selectedAppointment.id, action: "complete" });
     setIsUploading(true);
     try {
       let attachmentUrl = "";
@@ -359,7 +366,7 @@ export default function AppointmentsPage() {
     status: string,
     appointmentNotes?: string,
   ) => {
-    setActionLoading(appointmentId);
+    setActionLoading({ id: appointmentId, action: status.toLowerCase() });
     try {
       const response = await fetch(`/api/appointments/${appointmentId}`, {
         method: "PATCH",
@@ -402,31 +409,35 @@ export default function AppointmentsPage() {
   const handlePaymentConfirm = async (paymentReceived: boolean) => {
     if (!completedAppointmentId) return;
 
-    if (paymentReceived) {
-      try {
-        const response = await fetch("/api/payments", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            appointmentId: completedAppointmentId,
-            amount: parseFloat(paymentAmount) || 500,
-            paymentMethod: "CASH",
-            notes: "Payment collected at clinic",
-            isPaid: true,
-          }),
-        });
+    try {
+      const response = await fetch("/api/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          appointmentId: completedAppointmentId,
+          amount: parseFloat(paymentAmount) || 500,
+          paymentMethod: "CASH",
+          notes: paymentReceived
+            ? "Payment collected at clinic"
+            : "Payment pending",
+          isPaid: paymentReceived,
+        }),
+      });
 
-        if (response.ok) {
-          toast.success("Payment recorded successfully!");
-          // Refresh appointments to reflect payment status change
-          fetchAppointments();
-        } else {
-          toast.error("Failed to record payment");
-        }
-      } catch {
+      if (response.ok) {
+        toast.success(
+          paymentReceived
+            ? "Payment recorded successfully!"
+            : "Payment marked as pending",
+        );
+        // Refresh appointments to reflect payment status change
+        fetchAppointments();
+      } else {
         toast.error("Failed to record payment");
       }
+    } catch {
+      toast.error("Failed to record payment");
     }
 
     // Close payment dialog
@@ -448,7 +459,7 @@ export default function AppointmentsPage() {
       return;
     }
 
-    setActionLoading(selectedAppointment.id);
+    setActionLoading({ id: selectedAppointment.id, action: "reschedule" });
     try {
       const response = await fetch(
         `/api/appointments/${selectedAppointment.id}/reschedule`,
@@ -497,13 +508,130 @@ export default function AppointmentsPage() {
     }
   };
 
+  // Handle doctor approving a pending appointment
+  const handleApprove = async (appointmentId: string) => {
+    setActionLoading({ id: appointmentId, action: "approve" });
+    try {
+      const response = await fetch(
+        `/api/appointments/${appointmentId}/approve`,
+        {
+          method: "POST",
+          credentials: "include",
+        },
+      );
+
+      if (response.ok) {
+        setAppointments((prev) =>
+          prev.map((a) =>
+            a.id === appointmentId ? { ...a, status: "SCHEDULED" } : a,
+          ),
+        );
+        toast.success("Appointment approved!");
+        fetchAppointments();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to approve appointment");
+      }
+    } catch {
+      toast.error("Failed to approve appointment");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Handle doctor declining a pending appointment
+  const handleDecline = async (appointmentId: string, reason: string) => {
+    if (!reason.trim() || reason.trim().length < 10) {
+      toast.error("Please provide a reason (at least 10 characters)");
+      return;
+    }
+
+    setActionLoading({ id: appointmentId, action: "decline" });
+    try {
+      const response = await fetch(
+        `/api/appointments/${appointmentId}/decline`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ reason: reason.trim() }),
+        },
+      );
+
+      if (response.ok) {
+        setAppointments((prev) =>
+          prev.map((a) =>
+            a.id === appointmentId ? { ...a, status: "DECLINED" } : a,
+          ),
+        );
+        toast.success("Appointment declined");
+        setDialogType(null);
+        setSelectedAppointment(null);
+        setNotes("");
+        fetchAppointments();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to decline appointment");
+      }
+    } catch {
+      toast.error("Failed to decline appointment");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Handle patient cancelling their appointment
+  const handlePatientCancel = async (appointmentId: string, reason: string) => {
+    if (!reason.trim() || reason.trim().length < 10) {
+      toast.error("Please provide a reason (at least 10 characters)");
+      return;
+    }
+
+    setActionLoading({ id: appointmentId, action: "patient_cancel" });
+    try {
+      const response = await fetch(
+        `/api/appointments/${appointmentId}/cancel`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ reason: reason.trim() }),
+        },
+      );
+
+      if (response.ok) {
+        setAppointments((prev) =>
+          prev.map((a) =>
+            a.id === appointmentId ? { ...a, status: "CANCELLED" } : a,
+          ),
+        );
+        toast.success("Appointment cancelled");
+        setDialogType(null);
+        setSelectedAppointment(null);
+        setNotes("");
+        fetchAppointments();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to cancel appointment");
+      }
+    } catch {
+      toast.error("Failed to cancel appointment");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "PENDING":
+        return "bg-yellow-100 text-yellow-700";
       case "SCHEDULED":
         return "bg-green-100 text-green-700";
       case "COMPLETED":
         return "bg-blue-100 text-blue-700";
       case "CANCELLED":
+        return "bg-red-100 text-red-700";
+      case "DECLINED":
         return "bg-red-100 text-red-700";
       case "RESCHEDULED":
         return "bg-amber-100 text-amber-700";
@@ -667,7 +795,41 @@ export default function AppointmentsPage() {
                     </div>
                   )}
 
-                  {/* Doctor Actions */}
+                  {/* Doctor Actions - PENDING appointments: Approve/Decline */}
+                  {isDoctor && appointment.status === "PENDING" && (
+                    <div className="flex items-center gap-1.5 sm:gap-2 pt-2 border-t flex-wrap">
+                      <Button
+                        size="sm"
+                        onClick={() => handleApprove(appointment.id)}
+                        className="bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
+                        disabled={actionLoading?.id === appointment.id}
+                      >
+                        {actionLoading?.id === appointment.id &&
+                        actionLoading?.action === "approve" ? (
+                          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1" />
+                        ) : (
+                          <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        )}
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          setSelectedAppointment(appointment);
+                          setDialogType("decline");
+                          setNotes("");
+                        }}
+                        className="bg-red-500 hover:bg-red-600 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
+                        disabled={actionLoading?.id === appointment.id}
+                      >
+                        <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        Decline
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Doctor Actions - SCHEDULED/RESCHEDULED: Complete/Reschedule/Cancel */}
                   {isDoctor &&
                     (appointment.status === "SCHEDULED" ||
                       appointment.status === "RESCHEDULED") && (
@@ -685,15 +847,17 @@ export default function AppointmentsPage() {
                             setSelectedFile(null);
                           }}
                           className="bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
-                          disabled={actionLoading === appointment.id}
+                          disabled={actionLoading?.id === appointment.id}
                         >
-                          {actionLoading === appointment.id ? (
+                          {actionLoading?.id === appointment.id ? (
                             <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1" />
                           ) : (
-                            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                            <Pill className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                           )}
-                          <span className="hidden xs:inline">Complete</span>
-                          <span className="xs:hidden">Done</span>
+                          <span className="hidden xs:inline">
+                            Start Prescription
+                          </span>
+                          <span className="xs:hidden">Prescription</span>
                         </Button>
                         {/* Only show Reschedule button for SCHEDULED status - not for already rescheduled */}
                         {appointment.status === "SCHEDULED" && (
@@ -709,9 +873,9 @@ export default function AppointmentsPage() {
                               setRescheduleTime(appointment.appointmentTime);
                               setDialogType("reschedule");
                             }}
-                            disabled={actionLoading === appointment.id}
+                            disabled={actionLoading?.id === appointment.id}
                           >
-                            {actionLoading === appointment.id ? (
+                            {actionLoading?.id === appointment.id ? (
                               <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1" />
                             ) : (
                               <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
@@ -727,9 +891,9 @@ export default function AppointmentsPage() {
                             setDialogType("cancel");
                           }}
                           className="bg-red-500 hover:bg-red-600 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
-                          disabled={actionLoading === appointment.id}
+                          disabled={actionLoading?.id === appointment.id}
                         >
-                          {actionLoading === appointment.id ? (
+                          {actionLoading?.id === appointment.id ? (
                             <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1" />
                           ) : (
                             <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
@@ -738,6 +902,39 @@ export default function AppointmentsPage() {
                         </Button>
                       </div>
                     )}
+
+                  {/* Patient: Pending Approval Info */}
+                  {!isDoctor && appointment.status === "PENDING" && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 sm:p-3 space-y-1.5 sm:space-y-2">
+                      <div className="flex items-center gap-2 text-yellow-700">
+                        <Clock size={14} className="shrink-0" />
+                        <span className="font-medium text-xs sm:text-sm">
+                          Awaiting Doctor Approval
+                        </span>
+                      </div>
+                      <p className="text-xs text-yellow-600">
+                        Your appointment request is pending. You will be
+                        notified once the doctor reviews and confirms your
+                        appointment.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Patient: Declined Appointment Info */}
+                  {!isDoctor && appointment.status === "DECLINED" && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-2 sm:p-3 space-y-1.5 sm:space-y-2">
+                      <div className="flex items-center gap-2 text-red-700">
+                        <XCircle size={14} className="shrink-0" />
+                        <span className="font-medium text-xs sm:text-sm">
+                          Appointment Declined
+                        </span>
+                      </div>
+                      <p className="text-xs text-red-600">
+                        Your appointment request was declined by the doctor.
+                        Please try booking a different time slot.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Patient: Rescheduled Appointment Info */}
                   {!isDoctor && appointment.status === "RESCHEDULED" && (
@@ -783,7 +980,31 @@ export default function AppointmentsPage() {
                     </div>
                   )}
 
-                  {/* Patient Actions */}
+                  {/* Patient Actions - Cancel for SCHEDULED appointments */}
+                  {!isDoctor && appointment.status === "SCHEDULED" && (
+                    <div className="flex items-center gap-2 pt-2 border-t mt-2">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="bg-red-500 hover:bg-red-600 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
+                        onClick={() => {
+                          setSelectedAppointment(appointment);
+                          setDialogType("patient_cancel");
+                          setNotes("");
+                        }}
+                        disabled={actionLoading?.id === appointment.id}
+                      >
+                        {actionLoading?.id === appointment.id ? (
+                          <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1" />
+                        ) : (
+                          <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        )}
+                        Cancel Appointment
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Patient Actions - View Details for COMPLETED */}
                   {!isDoctor && appointment.status === "COMPLETED" && (
                     <div className="flex items-center gap-2 pt-2 border-t mt-2">
                       <Button
@@ -823,10 +1044,10 @@ export default function AppointmentsPage() {
           className="max-w-3xl max-h-[90vh] overflow-y-auto"
         >
           <DialogHeader>
-            <DialogTitle>Complete Appointment & Add Prescription</DialogTitle>
+            <DialogTitle>Write Prescription</DialogTitle>
             <DialogDescription>
-              Add diagnosis, medications, and attachments to complete the
-              appointment.
+              Enter diagnosis, medications and notes. Click &quot;Done&quot;
+              when finished to complete the appointment and record payment.
             </DialogDescription>
           </DialogHeader>
 
@@ -844,7 +1065,9 @@ export default function AppointmentsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Follow-up Date</label>
+                <label className="text-sm font-medium">
+                  Follow-up Date <span className="text-red-500">*</span>
+                </label>
                 <Input
                   type="date"
                   value={followUpDate}
@@ -855,7 +1078,9 @@ export default function AppointmentsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Clinical Notes</label>
+              <label className="text-sm font-medium">
+                Clinical Notes <span className="text-red-500">*</span>
+              </label>
               <Textarea
                 value={prescriptionNotes}
                 onChange={(e) => setPrescriptionNotes(e.target.value)}
@@ -870,7 +1095,8 @@ export default function AppointmentsPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium flex items-center gap-2">
-                  <Pill className="h-4 w-4" /> Medications
+                  <Pill className="h-4 w-4" /> Medications{" "}
+                  <span className="text-red-500">*</span>
                 </h4>
                 <Button variant="outline" size="sm" onClick={addMedication}>
                   <Plus className="h-3 w-3 mr-1" /> Add Medicine
@@ -878,9 +1104,9 @@ export default function AppointmentsPage() {
               </div>
 
               {medications.length === 0 ? (
-                <div className="text-center py-4 bg-gray-50 rounded-lg text-sm text-muted-foreground border border-dashed">
-                  No medications added. Click &quot;Add Medicine&quot; to
-                  prescribe.
+                <div className="text-center py-4 bg-red-50 rounded-lg text-sm text-red-600 border border-dashed border-red-300">
+                  At least one medication is required. Click &quot;Add
+                  Medicine&quot; to prescribe.
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1032,30 +1258,61 @@ export default function AppointmentsPage() {
             </div>
           </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDialogType(null);
-                setSelectedAppointment(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCompleteWithPrescription}
-              disabled={
-                actionLoading === selectedAppointment?.id || isUploading
-              }
-              className="bg-green-500 hover:bg-green-600 text-white"
-            >
-              {actionLoading === selectedAppointment?.id || isUploading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
-              ) : (
-                <CheckCircle className="h-4 w-4 mr-1" />
-              )}
-              Save & Complete
-            </Button>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
+            {/* Validation message */}
+            {(!diagnosis.trim() ||
+              !prescriptionNotes.trim() ||
+              !followUpDate ||
+              medications.length === 0 ||
+              medications.some(
+                (med) =>
+                  !med.medicineName.trim() ||
+                  !med.dosage.trim() ||
+                  !med.frequency.trim() ||
+                  !med.duration.trim(),
+              )) && (
+              <p className="text-xs text-red-500 mr-auto">
+                Please fill all required fields (*) to enable Done button
+              </p>
+            )}
+            <div className="flex gap-2 ml-auto">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDialogType(null);
+                  setSelectedAppointment(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCompleteWithPrescription}
+                disabled={
+                  actionLoading?.id === selectedAppointment?.id ||
+                  isUploading ||
+                  !diagnosis.trim() ||
+                  !prescriptionNotes.trim() ||
+                  !followUpDate ||
+                  medications.length === 0 ||
+                  medications.some(
+                    (med) =>
+                      !med.medicineName.trim() ||
+                      !med.dosage.trim() ||
+                      !med.frequency.trim() ||
+                      !med.duration.trim(),
+                  )
+                }
+                className="bg-green-500 hover:bg-green-600 text-white disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                {actionLoading?.id === selectedAppointment?.id ||
+                isUploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : (
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                )}
+                Done
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1120,10 +1377,165 @@ export default function AppointmentsPage() {
                 handleStatusChange(selectedAppointment.id, "CANCELLED", notes)
               }
               disabled={
-                actionLoading === selectedAppointment?.id || !notes.trim()
+                actionLoading?.id === selectedAppointment?.id || !notes.trim()
               }
             >
-              {actionLoading === selectedAppointment?.id ? (
+              {actionLoading?.id === selectedAppointment?.id ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <XCircle className="h-4 w-4 mr-1" />
+              )}
+              Cancel Appointment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Decline Appointment Dialog (Doctor) */}
+      <Dialog
+        open={dialogType === "decline"}
+        onOpenChange={() => {
+          setDialogType(null);
+          setSelectedAppointment(null);
+          setNotes("");
+        }}
+      >
+        <DialogContent style={{ backgroundColor: "white" }}>
+          <DialogHeader>
+            <DialogTitle>Decline Appointment Request</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to decline this appointment request? The
+              patient will be notified.{" "}
+              <strong>Please provide a reason for declining.</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Reason for declining <span className="text-red-500">*</span>
+              </label>
+              <Textarea
+                placeholder="e.g., Schedule conflict, please try a different time slot..."
+                value={notes}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                  setNotes(e.target.value)
+                }
+                rows={3}
+                className={notes.trim().length < 10 ? "border-red-300" : ""}
+              />
+              {notes.trim().length < 10 && (
+                <p className="text-xs text-red-500">
+                  Reason must be at least 10 characters
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => {
+                setDialogType(null);
+                setSelectedAppointment(null);
+                setNotes("");
+              }}
+            >
+              Go Back
+            </Button>
+            <Button
+              variant="destructive"
+              className="w-full sm:w-auto"
+              onClick={() =>
+                selectedAppointment &&
+                handleDecline(selectedAppointment.id, notes)
+              }
+              disabled={
+                actionLoading?.id === selectedAppointment?.id ||
+                notes.trim().length < 10
+              }
+            >
+              {actionLoading?.id === selectedAppointment?.id ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <XCircle className="h-4 w-4 mr-1" />
+              )}
+              Decline Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Patient Cancel Appointment Dialog */}
+      <Dialog
+        open={dialogType === "patient_cancel"}
+        onOpenChange={() => {
+          setDialogType(null);
+          setSelectedAppointment(null);
+          setNotes("");
+        }}
+      >
+        <DialogContent style={{ backgroundColor: "white" }}>
+          <DialogHeader>
+            <DialogTitle>Cancel Your Appointment</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this appointment? The doctor will
+              be notified.{" "}
+              <strong>Please provide a reason for cancellation.</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-sm text-amber-700">
+                <strong>Note:</strong> Cancelling an appointment may affect
+                future scheduling. Please try to cancel at least 24 hours in
+                advance.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Reason for cancellation <span className="text-red-500">*</span>
+              </label>
+              <Textarea
+                placeholder="Please provide a reason for cancelling..."
+                value={notes}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                  setNotes(e.target.value)
+                }
+                rows={3}
+                className={notes.trim().length < 10 ? "border-red-300" : ""}
+              />
+              {notes.trim().length < 10 && (
+                <p className="text-xs text-red-500">
+                  Reason must be at least 10 characters
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => {
+                setDialogType(null);
+                setSelectedAppointment(null);
+                setNotes("");
+              }}
+            >
+              Keep Appointment
+            </Button>
+            <Button
+              variant="destructive"
+              className="w-full sm:w-auto"
+              onClick={() =>
+                selectedAppointment &&
+                handlePatientCancel(selectedAppointment.id, notes)
+              }
+              disabled={
+                actionLoading?.id === selectedAppointment?.id ||
+                notes.trim().length < 10
+              }
+            >
+              {actionLoading?.id === selectedAppointment?.id ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-1" />
               ) : (
                 <XCircle className="h-4 w-4 mr-1" />
@@ -1209,12 +1621,12 @@ export default function AppointmentsPage() {
               className="bg-amber-500 hover:bg-amber-600 text-white border-none w-full sm:w-auto"
               onClick={handleReschedule}
               disabled={
-                actionLoading === selectedAppointment?.id ||
+                actionLoading?.id === selectedAppointment?.id ||
                 !rescheduleDate ||
                 !rescheduleTime
               }
             >
-              {actionLoading === selectedAppointment?.id ? (
+              {actionLoading?.id === selectedAppointment?.id ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-1" />
               ) : (
                 <CalendarDays className="h-4 w-4 mr-1" />

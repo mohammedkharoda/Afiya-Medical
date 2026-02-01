@@ -3,10 +3,7 @@ import { db, appointments } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/session";
 import { triggerAppointmentUpdate } from "@/lib/pusher";
-import {
-  notifyPatientAppointmentStatusChange,
-  notifyDoctorAppointmentCancelledByPatient,
-} from "@/lib/notifications";
+import { notifyPatientAppointmentDeclined } from "@/lib/notifications";
 import { format } from "date-fns";
 
 export async function POST(
@@ -20,13 +17,21 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Only doctors and admins can decline appointments
+    if (session.user.role !== "DOCTOR" && session.user.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Only doctors can decline appointments" },
+        { status: 403 },
+      );
+    }
+
     const body = await req.json();
     const { reason } = body;
 
     // Validate reason
     if (!reason || reason.trim().length < 10) {
       return NextResponse.json(
-        { error: "Cancellation reason must be at least 10 characters" },
+        { error: "Decline reason must be at least 10 characters" },
         { status: 400 },
       );
     }
@@ -50,69 +55,39 @@ export async function POST(
       );
     }
 
-    // Check authorization
-    const isDoctor =
-      session.user.role === "DOCTOR" || session.user.role === "ADMIN";
-    const isPatientOwner = appointment.patient.userId === session.user.id;
-
-    if (!isDoctor && !isPatientOwner) {
+    // Check if appointment is pending
+    if (appointment.status !== "PENDING") {
       return NextResponse.json(
-        { error: "You are not authorized to cancel this appointment" },
-        { status: 403 },
-      );
-    }
-
-    // Check if appointment can be cancelled (both SCHEDULED and RESCHEDULED appointments)
-    if (
-      appointment.status !== "SCHEDULED" &&
-      appointment.status !== "RESCHEDULED"
-    ) {
-      return NextResponse.json(
-        {
-          error: "Only scheduled or rescheduled appointments can be cancelled",
-        },
+        { error: "Only pending appointments can be declined" },
         { status: 400 },
       );
     }
 
-    // Update appointment
+    // Update appointment to declined
     const [updatedAppointment] = await db
       .update(appointments)
       .set({
-        status: "CANCELLED",
-        cancellationReason: reason.trim(),
-        cancelledAt: new Date(),
-        cancelledBy: session.user.id,
+        status: "DECLINED",
+        declinedAt: new Date(),
+        declinedBy: session.user.id,
+        declineReason: reason.trim(),
         updatedAt: new Date(),
       })
       .where(eq(appointments.id, appointmentId))
       .returning();
 
-    const formattedDate = format(appointment.appointmentDate, "MMMM d, yyyy");
-
-    // Send notification to the patient (if cancelled by doctor)
+    // Send notification to patient
     const patientUserId = appointment.patient?.user?.id;
-    if (isDoctor && patientUserId) {
-      // Notify patient about cancellation
-      notifyPatientAppointmentStatusChange(
-        patientUserId,
-        "CANCELLED",
-        formattedDate,
-        appointment.appointmentTime,
-      ).catch((err) =>
-        console.error("Error notifying patient of cancellation:", err),
-      );
-    }
+    if (patientUserId) {
+      const formattedDate = format(appointment.appointmentDate, "MMMM d, yyyy");
 
-    // Send notification to the doctor (if cancelled by patient)
-    if (!isDoctor && isPatientOwner) {
-      notifyDoctorAppointmentCancelledByPatient(
-        session.user.id,
+      notifyPatientAppointmentDeclined(
+        patientUserId,
         formattedDate,
         appointment.appointmentTime,
         reason.trim(),
       ).catch((err) =>
-        console.error("Error notifying doctor of patient cancellation:", err),
+        console.error("Error notifying patient of decline:", err),
       );
     }
 
@@ -127,10 +102,11 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: "Appointment cancelled successfully",
+      message: "Appointment declined",
+      appointment: updatedAppointment,
     });
   } catch (error) {
-    console.error("Error cancelling appointment:", error);
+    console.error("Error declining appointment:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

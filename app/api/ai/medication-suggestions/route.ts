@@ -15,12 +15,23 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getSession(req);
 
+    // Debug logging
+    console.log("[AI Medication] Session check:", {
+      hasSession: !!session,
+      userRole: session?.user?.role,
+      userId: session?.user?.id,
+      sessionToken: req.cookies.get("better-auth.session_token")?.value
+        ? "present"
+        : "missing",
+    });
+
     // Only doctors and admins can access AI medication suggestions
     if (
       !session ||
       (session.user.role?.toUpperCase() !== "DOCTOR" &&
         session.user.role?.toUpperCase() !== "ADMIN")
     ) {
+      console.log("[AI Medication] Unauthorized - role:", session?.user?.role);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

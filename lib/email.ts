@@ -23,6 +23,17 @@ import {
   getAppointmentReminderSubject,
   getPrescriptionTemplate,
   getPrescriptionSubject,
+  // Approval workflow templates
+  getAppointmentPendingTemplate,
+  getAppointmentPendingSubject,
+  getAppointmentApprovalRequestTemplate,
+  getAppointmentApprovalRequestSubject,
+  getAppointmentApprovedTemplate,
+  getAppointmentApprovedSubject,
+  getAppointmentDeclinedTemplate,
+  getAppointmentDeclinedSubject,
+  getAppointmentCancelledByPatientTemplate,
+  getAppointmentCancelledByPatientSubject,
 } from "./email-templates";
 
 // Initialize Resend
@@ -353,5 +364,202 @@ export async function sendPrescriptionEmail(
       error instanceof Error ? error.message : "Unknown error";
     console.error("Error sending prescription email:", error);
     return { success: false, error: errorMessage };
+  }
+}
+
+// ============================================================================
+// APPOINTMENT PENDING (for patients - when booking awaits approval)
+// ============================================================================
+
+export async function sendAppointmentPendingEmail(
+  email: string,
+  patientName: string,
+  date: string,
+  time: string,
+  doctorName: string,
+  clinicName: string,
+) {
+  try {
+    const result = await resend.emails.send({
+      from: getFromEmail(),
+      to: email,
+      subject: getAppointmentPendingSubject(clinicName),
+      html: getAppointmentPendingTemplate({
+        patientName,
+        date,
+        time,
+        doctorName,
+        clinicName,
+      }),
+    });
+
+    if (result.error) {
+      console.error("Resend error:", result.error);
+      return false;
+    }
+
+    console.log(`Appointment pending email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error("Error sending appointment pending email:", error);
+    return false;
+  }
+}
+
+// ============================================================================
+// APPOINTMENT APPROVAL REQUEST (for doctors - when new appointment needs approval)
+// ============================================================================
+
+export async function sendAppointmentApprovalRequestEmail(
+  doctorEmail: string,
+  patientName: string,
+  patientPhone: string,
+  date: string,
+  time: string,
+  symptoms: string,
+  clinicName: string,
+) {
+  try {
+    const result = await resend.emails.send({
+      from: getFromEmail(),
+      to: doctorEmail,
+      subject: getAppointmentApprovalRequestSubject(clinicName),
+      html: getAppointmentApprovalRequestTemplate({
+        patientName,
+        patientPhone,
+        date,
+        time,
+        symptoms,
+        clinicName,
+      }),
+    });
+
+    if (result.error) {
+      console.error("Resend error:", result.error);
+      return false;
+    }
+
+    console.log(`Appointment approval request email sent to ${doctorEmail}`);
+    return true;
+  } catch (error) {
+    console.error("Error sending appointment approval request email:", error);
+    return false;
+  }
+}
+
+// ============================================================================
+// APPOINTMENT APPROVED (for patients - when doctor approves)
+// ============================================================================
+
+export async function sendAppointmentApprovedEmail(
+  email: string,
+  patientName: string,
+  date: string,
+  time: string,
+  doctorName: string,
+  clinicName: string,
+) {
+  try {
+    const result = await resend.emails.send({
+      from: getFromEmail(),
+      to: email,
+      subject: getAppointmentApprovedSubject(clinicName),
+      html: getAppointmentApprovedTemplate({
+        patientName,
+        date,
+        time,
+        doctorName,
+        clinicName,
+      }),
+    });
+
+    if (result.error) {
+      console.error("Resend error:", result.error);
+      return false;
+    }
+
+    console.log(`Appointment approved email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error("Error sending appointment approved email:", error);
+    return false;
+  }
+}
+
+// ============================================================================
+// APPOINTMENT DECLINED (for patients - when doctor declines)
+// ============================================================================
+
+export async function sendAppointmentDeclinedEmail(
+  email: string,
+  patientName: string,
+  date: string,
+  time: string,
+  reason: string | undefined,
+  clinicName: string,
+) {
+  try {
+    const result = await resend.emails.send({
+      from: getFromEmail(),
+      to: email,
+      subject: getAppointmentDeclinedSubject(clinicName),
+      html: getAppointmentDeclinedTemplate({
+        patientName,
+        date,
+        time,
+        reason,
+        clinicName,
+      }),
+    });
+
+    if (result.error) {
+      console.error("Resend error:", result.error);
+      return false;
+    }
+
+    console.log(`Appointment declined email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error("Error sending appointment declined email:", error);
+    return false;
+  }
+}
+
+// ============================================================================
+// APPOINTMENT CANCELLED BY PATIENT (for doctors)
+// ============================================================================
+
+export async function sendAppointmentCancelledByPatientEmail(
+  doctorEmail: string,
+  patientName: string,
+  patientPhone: string,
+  date: string,
+  time: string,
+  reason: string,
+) {
+  try {
+    const result = await resend.emails.send({
+      from: getFromEmail(),
+      to: doctorEmail,
+      subject: getAppointmentCancelledByPatientSubject("Afiya Medical Clinic"),
+      html: getAppointmentCancelledByPatientTemplate({
+        patientName,
+        patientPhone,
+        date,
+        time,
+        reason,
+      }),
+    });
+
+    if (result.error) {
+      console.error("Resend error:", result.error);
+      return false;
+    }
+
+    console.log(`Patient cancellation email sent to ${doctorEmail}`);
+    return true;
+  } catch (error) {
+    console.error("Error sending patient cancellation email:", error);
+    return false;
   }
 }

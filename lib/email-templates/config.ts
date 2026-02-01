@@ -54,4 +54,15 @@ export const EMAIL_SUBJECTS = {
     `Appointment Update - ${clinicName}`,
   prescription: (doctorName: string, clinicName: string) =>
     `New Prescription from Dr. ${doctorName} - ${clinicName}`,
+  // Approval workflow subjects
+  appointmentPending: (clinicName: string) =>
+    `Appointment Request Received - ${clinicName}`,
+  appointmentApprovalRequest: (clinicName: string) =>
+    `Action Required: New Appointment Request - ${clinicName}`,
+  appointmentApproved: (clinicName: string) =>
+    `Appointment Confirmed - ${clinicName}`,
+  appointmentDeclined: (clinicName: string) =>
+    `Appointment Request Declined - ${clinicName}`,
+  appointmentCancelledByPatient: (clinicName: string) =>
+    `Patient Cancelled Appointment - ${clinicName}`,
 };

@@ -37,7 +37,7 @@ export function useMedicationSuggestions({
     async (
       diagnosis: string,
       existingMedications: ExistingMedication[],
-      symptoms?: string
+      symptoms?: string,
     ) => {
       // Cancel any ongoing request
       if (abortControllerRef.current) {
@@ -54,13 +54,22 @@ export function useMedicationSuggestions({
       }));
 
       try {
+        // Filter out empty/incomplete medications before sending
+        const validMedications = existingMedications.filter(
+          (med) =>
+            med.medicineName.trim() &&
+            med.dosage.trim() &&
+            med.frequency.trim() &&
+            med.duration.trim(),
+        );
+
         const response = await fetch("/api/ai/medication-suggestions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             diagnosis,
             appointmentId,
-            existingMedications,
+            existingMedications: validMedications,
             symptoms,
           }),
           signal: abortControllerRef.current.signal,
@@ -69,7 +78,7 @@ export function useMedicationSuggestions({
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(
-            errorData.error || `Request failed with status ${response.status}`
+            errorData.error || `Request failed with status ${response.status}`,
           );
         }
 
@@ -90,7 +99,9 @@ export function useMedicationSuggestions({
         }
 
         const errorMessage =
-          error instanceof Error ? error.message : "Failed to fetch suggestions";
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch suggestions";
 
         setState((prev) => ({
           ...prev,
@@ -101,7 +112,7 @@ export function useMedicationSuggestions({
         return [];
       }
     },
-    [appointmentId]
+    [appointmentId],
   );
 
   const clearSuggestions = useCallback(() => {

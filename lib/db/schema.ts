@@ -22,9 +22,11 @@ export const documentTypeEnum = pgEnum("DocumentType", [
   "OTHER",
 ]);
 export const appointmentStatusEnum = pgEnum("AppointmentStatus", [
-  "SCHEDULED",
+  "PENDING", // Initial state when patient books, awaiting doctor approval
+  "SCHEDULED", // Approved by doctor
   "COMPLETED",
   "CANCELLED",
+  "DECLINED", // Doctor declined the appointment request
   "RESCHEDULED",
 ]);
 export const paymentStatusEnum = pgEnum("PaymentStatus", ["PENDING", "PAID"]);
@@ -202,12 +204,19 @@ export const appointments = pgTable("appointments", {
     .references(() => patientProfiles.id, { onDelete: "cascade" }),
   appointmentDate: timestamp("appointmentDate").notNull(),
   appointmentTime: text("appointmentTime").notNull(),
-  status: appointmentStatusEnum("status").default("SCHEDULED").notNull(),
+  status: appointmentStatusEnum("status").default("PENDING").notNull(),
   symptoms: text("symptoms").notNull(),
   notes: text("notes"),
   paymentStatus: paymentStatusEnum("paymentStatus")
     .default("PENDING")
     .notNull(),
+  // Approval tracking
+  approvedAt: timestamp("approvedAt"),
+  approvedBy: text("approvedBy"), // userId who approved
+  // Decline tracking
+  declinedAt: timestamp("declinedAt"),
+  declinedBy: text("declinedBy"), // userId who declined
+  declineReason: text("declineReason"),
   // Cancellation tracking
   cancellationReason: text("cancellationReason"),
   cancelledAt: timestamp("cancelledAt"),

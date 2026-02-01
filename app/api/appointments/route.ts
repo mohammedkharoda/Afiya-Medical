@@ -3,8 +3,8 @@ import { db, appointments, patientProfiles } from "@/lib/db";
 import { eq, and, ne, gte, lt } from "drizzle-orm";
 import { getSession } from "@/lib/session";
 import {
-  notifyPatientAppointmentBooked,
-  notifyDoctorNewAppointment,
+  notifyPatientAppointmentPending,
+  notifyDoctorApprovalNeeded,
 } from "@/lib/notifications";
 import { format } from "date-fns";
 import { triggerNewAppointment } from "@/lib/pusher";
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create appointment
+    // Create appointment with PENDING status (awaiting doctor approval)
     const [appointment] = await db
       .insert(appointments)
       .values({
@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
         appointmentTime,
         symptoms,
         notes,
-        status: "SCHEDULED",
+        status: "PENDING",
         paymentStatus: "PENDING",
       })
       .returning();
@@ -188,15 +188,15 @@ export async function POST(req: NextRequest) {
     // Send notifications (don't await to avoid blocking response)
     const formattedDate = format(new Date(appointmentDate), "MMMM d, yyyy");
 
-    // Notify patient via email, SMS, and in-app notification
-    notifyPatientAppointmentBooked(
+    // Notify patient that appointment is pending approval
+    notifyPatientAppointmentPending(
       session.user.id,
       formattedDate,
       appointmentTime,
     ).catch((err) => console.error("Error notifying patient:", err));
 
-    // Notify doctor via email, SMS, and in-app notification
-    notifyDoctorNewAppointment(
+    // Notify doctor that approval is needed
+    notifyDoctorApprovalNeeded(
       session.user.id,
       formattedDate,
       appointmentTime,

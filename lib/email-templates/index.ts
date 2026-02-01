@@ -77,3 +77,33 @@ export {
   getPrescriptionTemplate,
   getPrescriptionSubject,
 } from "./prescription";
+
+// Appointment - Pending Approval (patient)
+export {
+  getAppointmentPendingTemplate,
+  getAppointmentPendingSubject,
+} from "./appointment-pending";
+
+// Appointment - Approval Request (doctor)
+export {
+  getAppointmentApprovalRequestTemplate,
+  getAppointmentApprovalRequestSubject,
+} from "./appointment-approval-request";
+
+// Appointment - Approved (patient)
+export {
+  getAppointmentApprovedTemplate,
+  getAppointmentApprovedSubject,
+} from "./appointment-approved";
+
+// Appointment - Declined (patient)
+export {
+  getAppointmentDeclinedTemplate,
+  getAppointmentDeclinedSubject,
+} from "./appointment-declined";
+
+// Appointment - Cancelled by Patient (doctor)
+export {
+  getAppointmentCancelledByPatientTemplate,
+  getAppointmentCancelledByPatientSubject,
+} from "./appointment-cancelled-by-patient";
