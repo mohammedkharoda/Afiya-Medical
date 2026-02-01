@@ -102,7 +102,7 @@ export async function sendAppointmentConfirmationPush(
 // Send appointment status change push notification
 export async function sendAppointmentStatusPush(
   userId: string,
-  status: "COMPLETED" | "CANCELLED" | "RESCHEDULED",
+  status: "COMPLETED" | "CANCELLED" | "RESCHEDULED" | "DECLINED",
   appointmentDate: string,
 ): Promise<boolean> {
   let title = "";
@@ -120,6 +120,10 @@ export async function sendAppointmentStatusPush(
     case "RESCHEDULED":
       title = "Appointment Rescheduled 📅";
       body = `Your appointment has been rescheduled to ${appointmentDate}. Please check your dashboard for details.`;
+      break;
+    case "DECLINED":
+      title = "Appointment Declined ❌";
+      body = `Your appointment request for ${appointmentDate} has been declined by the doctor.`;
       break;
   }
 
