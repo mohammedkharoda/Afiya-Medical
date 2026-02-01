@@ -5,7 +5,6 @@ import {
   sendAppointmentConfirmationEmail,
   sendAppointmentStatusEmail,
   sendNewAppointmentAlertEmail,
-  sendAppointmentPendingEmail,
   sendAppointmentApprovalRequestEmail,
   sendAppointmentApprovedEmail,
   sendAppointmentDeclinedEmail,
@@ -189,17 +188,14 @@ export async function notifyPatientAppointmentStatusChange(
 // ============================================================================
 
 // Notify patient when appointment is pending approval
+// Note: Email is intentionally NOT sent here - patient only receives in-app notification
+// Doctor will review and approve/decline, and patient will receive email at that time
 export async function notifyPatientAppointmentPending(
   userId: string,
   date: string,
   time: string,
 ) {
-  const patientName = await getUserName(userId);
-  const patientEmail = await getUserEmail(userId);
-  const doctor = await getDoctor();
-  const doctorName = doctor?.name || "Doctor";
-
-  // Trigger real-time notification via Pusher
+  // Trigger real-time notification via Pusher (in-app only, no email)
   await triggerNotification(userId, {
     id: `appointment-pending-${Date.now()}`,
     type: "APPOINTMENT_CONFIRMATION",
@@ -207,18 +203,6 @@ export async function notifyPatientAppointmentPending(
     message: NOTIFICATION_MESSAGES.APPOINTMENT_PENDING_PATIENT(date, time),
     createdAt: new Date(),
   });
-
-  // Send email
-  if (patientEmail) {
-    await sendAppointmentPendingEmail(
-      patientEmail,
-      patientName,
-      date,
-      time,
-      doctorName,
-      CLINIC_NAME,
-    );
-  }
 }
 
 // Notify doctor when new appointment needs approval

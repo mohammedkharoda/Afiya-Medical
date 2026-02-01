@@ -68,7 +68,7 @@ export default function RegisterPage() {
         return;
       }
 
-      toast.success("Account created! Please verify your phone number.");
+      toast.success("Account created! Please check your email for the verification code.");
 
       // Redirect to OTP verification page with token (phone hidden)
       if (result?.token) {
