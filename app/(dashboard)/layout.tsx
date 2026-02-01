@@ -183,20 +183,50 @@ export default function DashboardLayout({
     : [];
 
   const handleSignOut = async () => {
-    try {
-      await signOut({
-        fetchOptions: {
-          onSuccess: () => {
-            // Manually clear cookies as fallback
-            document.cookie = "better-auth.session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-            // Use hard redirect to ensure page reloads fresh
-            window.location.href = "/login";
-          },
-        },
+    // Helper to clear all auth cookies on client side
+    const clearAuthCookies = () => {
+      const isProduction = window.location.hostname !== "localhost";
+      const domain = isProduction ? window.location.hostname : "";
+
+      // Cookie clearing options for different scenarios
+      const cookieOptions = [
+        // Basic clear
+        `better-auth.session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`,
+        // With domain
+        `better-auth.session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${domain};`,
+        // With secure and sameSite for production
+        `better-auth.session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=lax;`,
+        // Full production clear
+        `better-auth.session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${domain}; secure; samesite=lax;`,
+      ];
+
+      cookieOptions.forEach((cookie) => {
+        document.cookie = cookie;
       });
+    };
+
+    try {
+      // Use our custom logout API that properly clears server-side cookies
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      // Also try better-auth signOut
+      try {
+        await signOut();
+      } catch {
+        // Ignore better-auth signOut errors
+      }
+
+      // Clear client-side cookies as fallback
+      clearAuthCookies();
+
+      // Hard redirect to login page
+      window.location.href = "/login";
     } catch {
       // Clear cookies and redirect anyway on error
-      document.cookie = "better-auth.session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      clearAuthCookies();
       window.location.href = "/login";
     }
   };
