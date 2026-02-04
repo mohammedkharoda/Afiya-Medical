@@ -7,6 +7,7 @@ import { useSession, signOut } from "@/lib/auth-client";
 import {
   LayoutDashboard,
   Calendar,
+  CalendarDays,
   FileText,
   ClipboardList,
   User,
@@ -18,6 +19,7 @@ import {
   ChevronDown,
   Clock,
   TrendingUp,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,25 +58,31 @@ const navItems: NavItem[] = [
     label: "Appointments",
     href: "/appointments",
     icon: <Calendar size={20} />,
-    roles: ["PATIENT", "DOCTOR", "ADMIN"],
+    roles: ["PATIENT", "DOCTOR"],
   },
   {
     label: "My Patients",
     href: "/patients",
     icon: <Users size={20} />,
-    roles: ["DOCTOR", "ADMIN"],
+    roles: ["DOCTOR"],
   },
   {
     label: "Schedule Management",
     href: "/doctor/schedule",
     icon: <Clock size={20} />,
-    roles: ["DOCTOR", "ADMIN"],
+    roles: ["DOCTOR"],
+  },
+  {
+    label: "Monthly Appointments",
+    href: "/doctor/appointments-summary",
+    icon: <CalendarDays size={20} />,
+    roles: ["DOCTOR"],
   },
   {
     label: "Revenue Dashboard",
     href: "/doctor/revenue",
     icon: <TrendingUp size={20} />,
-    roles: ["DOCTOR", "ADMIN"],
+    roles: ["DOCTOR"],
   },
   {
     label: "Prescriptions",
@@ -92,7 +100,13 @@ const navItems: NavItem[] = [
     label: "Payments",
     href: "/payments",
     icon: <CreditCard size={20} />,
-    roles: ["PATIENT", "DOCTOR", "ADMIN"],
+    roles: ["PATIENT", "DOCTOR"],
+  },
+  {
+    label: "Doctor Invitations",
+    href: "/admin/invitations",
+    icon: <UserPlus size={20} />,
+    roles: ["ADMIN"],
   },
 ];
 
@@ -138,6 +152,11 @@ export default function DashboardLayout({
           const data = await response.json();
           console.log("Fetched user data:", data);
           setUserData(data.user);
+
+          // Redirect admin to invitations page if on dashboard
+          if (data.user?.role === "ADMIN" && pathname === "/dashboard") {
+            router.replace("/admin/invitations");
+          }
         } else if (response.status === 401) {
           // Session expired - sign out and redirect to login
           console.log("Session expired, signing out and redirecting to login");
@@ -158,7 +177,7 @@ export default function DashboardLayout({
 
     // Fetch immediately on mount, don't wait for session
     fetchUserData();
-  }, [setUserData]);
+  }, [setUserData, pathname, router]);
 
   const userRole = userData?.role;
   const rawName = userData?.name || session?.user?.name || "";

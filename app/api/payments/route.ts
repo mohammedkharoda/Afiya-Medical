@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, patientProfiles, payments, appointments } from "@/lib/db";
-import { eq, desc } from "drizzle-orm";
+import {
+  db,
+  patientProfiles,
+  payments,
+  appointments,
+  prescriptions,
+  medications,
+  users,
+  doctorProfiles,
+} from "@/lib/db";
+import { eq, desc, or, and, inArray } from "drizzle-orm";
 import { getSession } from "@/lib/session";
+import { sendPrescriptionEmail, sendBillingEmail } from "@/lib/email";
+import { format } from "date-fns";
 
 export async function GET(req: NextRequest) {
   try {
@@ -95,12 +106,57 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
-    // Update appointment payment status to PAID
+    // Update appointment payment status
     if (isPaid !== false) {
       await db
         .update(appointments)
         .set({ paymentStatus: "PAID" })
         .where(eq(appointments.id, appointmentId));
+    } else {
+      // Mark bill as sent and send billing email to patient
+      await db
+        .update(appointments)
+        .set({ billSent: true, billSentAt: new Date() })
+        .where(eq(appointments.id, appointmentId));
+
+      // Get appointment with patient and doctor details for billing email
+      const appointment = await db.query.appointments.findFirst({
+        where: eq(appointments.id, appointmentId),
+        with: {
+          patient: {
+            with: {
+              user: true,
+            },
+          },
+        },
+      });
+
+      if (appointment?.patient?.user?.email) {
+        const doctorId = appointment.doctorId || session.user.id;
+        const doctor = await db.query.users.findFirst({
+          where: eq(users.id, doctorId),
+        });
+        const docProfile = await db.query.doctorProfiles.findFirst({
+          where: eq(doctorProfiles.userId, doctorId),
+        });
+
+        sendBillingEmail({
+          patientEmail: appointment.patient.user.email,
+          patientName: appointment.patient.user.name,
+          doctorName: doctor?.name || "Doctor",
+          doctorSpeciality: docProfile?.speciality || "General Physician",
+          appointmentDate: format(
+            new Date(appointment.appointmentDate),
+            "dd MMM yyyy",
+          ),
+          appointmentTime: appointment.appointmentTime,
+          consultationFee: amount,
+          upiId: docProfile?.upiId || undefined,
+          upiQrCode: docProfile?.upiQrCode || undefined,
+          symptoms: appointment.symptoms,
+          clinicAddress: docProfile?.clinicAddress || undefined,
+        }).catch((err) => console.error("Error sending billing email:", err));
+      }
     }
 
     return NextResponse.json({ payment }, { status: 201 });
@@ -143,6 +199,82 @@ export async function PATCH(req: NextRequest) {
       .update(appointments)
       .set({ paymentStatus: status })
       .where(eq(appointments.id, payment.appointmentId));
+
+    // If payment is marked as PAID, send prescription email
+    if (status === "PAID") {
+      // Get appointment with prescription and patient details
+      const appointment = await db.query.appointments.findFirst({
+        where: eq(appointments.id, payment.appointmentId),
+        with: {
+          patient: {
+            with: {
+              user: true,
+            },
+          },
+          prescription: {
+            with: {
+              medications: true,
+            },
+          },
+        },
+      });
+
+      if (appointment?.prescription && appointment.patient?.user?.email) {
+        // Get doctor details
+        const doctorId = appointment.doctorId || appointment.approvedBy;
+        const doctor = doctorId
+          ? await db.query.users.findFirst({
+              where: eq(users.id, doctorId),
+            })
+          : null;
+        const doctorProfile = doctorId
+          ? await db.query.doctorProfiles.findFirst({
+              where: eq(doctorProfiles.userId, doctorId),
+              columns: {
+                clinicAddress: true,
+              },
+            })
+          : null;
+
+        // Mark prescription as sent
+        await db
+          .update(appointments)
+          .set({
+            prescriptionSent: true,
+            prescriptionSentAt: new Date(),
+          })
+          .where(eq(appointments.id, appointment.id));
+
+        // Send prescription email (don't await to avoid blocking response)
+        sendPrescriptionEmail({
+          patientEmail: appointment.patient.user.email,
+          patientName: appointment.patient.user.name,
+          doctorName: doctor?.name || "Doctor",
+          diagnosis: appointment.prescription.diagnosis,
+          medications: appointment.prescription.medications.map((med) => ({
+            medicineName: med.medicineName,
+            dosage: med.dosage,
+            frequency: med.frequency,
+            duration: med.duration,
+          })),
+          notes: appointment.prescription.notes || undefined,
+          followUpDate: appointment.prescription.followUpDate
+            ? format(
+                new Date(appointment.prescription.followUpDate),
+                "dd MMM yyyy",
+              )
+            : undefined,
+          prescriptionDate: format(
+            new Date(appointment.prescription.createdAt),
+            "dd MMM yyyy",
+          ),
+          attachmentUrl: appointment.prescription.attachmentUrl || undefined,
+          clinicAddress: doctorProfile?.clinicAddress || undefined,
+        }).catch((err) =>
+          console.error("Error sending prescription email:", err),
+        );
+      }
+    }
 
     return NextResponse.json({ payment });
   } catch (error) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { db } from "@/lib/db";
-import { patientProfiles } from "@/lib/db/schema";
+import { db, appointments, patientProfiles } from "@/lib/db";
+import { eq, or, inArray } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,20 +12,49 @@ export async function GET(req: NextRequest) {
     }
 
     const userRole = session.user.role || "PATIENT";
+    const userId = session.user.id;
 
     // Verify user is a doctor
-    if (userRole !== "DOCTOR" && userRole !== "ADMIN") {
+    if (userRole !== "DOCTOR") {
       return NextResponse.json(
         { error: "Only doctors can access patient list" },
         { status: 403 }
       );
     }
 
-    // Fetch all patients with at least one appointment
+    // Find all patient IDs that have appointments handled by this doctor
+    // A patient "belongs" to a doctor if the doctor has approved, completed, or handled their appointment
+    const doctorAppointments = await db.query.appointments.findMany({
+      where: or(
+        eq(appointments.approvedBy, userId),
+        eq(appointments.declinedBy, userId),
+        eq(appointments.cancelledBy, userId),
+        eq(appointments.rescheduledBy, userId)
+      ),
+      columns: {
+        patientId: true,
+      },
+    });
+
+    // Get unique patient IDs
+    const patientIds = [...new Set(doctorAppointments.map((a) => a.patientId))];
+
+    if (patientIds.length === 0) {
+      return NextResponse.json({ patients: [] });
+    }
+
+    // Fetch patient profiles for these patients
     const patientsData = await db.query.patientProfiles.findMany({
+      where: inArray(patientProfiles.id, patientIds),
       with: {
         user: true,
         appointments: {
+          where: or(
+            eq(appointments.approvedBy, userId),
+            eq(appointments.declinedBy, userId),
+            eq(appointments.cancelledBy, userId),
+            eq(appointments.rescheduledBy, userId)
+          ),
           orderBy: (appointments, { desc }) => [
             desc(appointments.appointmentDate),
           ],
@@ -34,12 +63,8 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    console.log("Total patient profiles found:", patientsData.length);
-    console.log("Sample patient data:", JSON.stringify(patientsData[0], null, 2));
-
-    // Filter patients who have appointments and format the response
+    // Format the response
     const patients = patientsData
-      .filter((p) => p.appointments.length > 0)
       .map((patient) => ({
         id: patient.id,
         name: patient.user.name,
@@ -58,8 +83,6 @@ export async function GET(req: NextRequest) {
           new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime()
         );
       });
-
-    console.log("Patients with appointments:", patients.length);
 
     return NextResponse.json({ patients });
   } catch (error) {

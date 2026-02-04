@@ -25,6 +25,8 @@ import {
   Eye,
   TrendingUp,
   RefreshCw,
+  Send,
+  Download,
 } from "lucide-react";
 import {
   Card,
@@ -45,6 +47,12 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as DatePicker } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { usePusherAppointments } from "@/hooks/use-pusher-notifications";
 import { AIMedicationSuggestions } from "@/components/ai-medication-suggestions";
@@ -60,6 +68,8 @@ interface Appointment {
   originalAppointmentTime?: string;
   rescheduledAt?: string;
   patient?: {
+    id?: string;
+    address?: string;
     user?: {
       name?: string;
       email?: string;
@@ -76,6 +86,7 @@ interface Appointment {
   prescription?: {
     diagnosis: string;
     notes?: string;
+    followUpDate?: string | null;
     medications: {
       medicineName: string;
       dosage: string;
@@ -100,10 +111,21 @@ interface UserData {
   role?: UserRole;
 }
 
+interface DoctorProfile {
+  speciality: string;
+  degrees: string[];
+  experience: number | null;
+  upiId: string;
+  clinicAddress: string | null;
+}
+
 export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [doctorProfile, setDoctorProfile] = useState<DoctorProfile | null>(
+    null,
+  );
   const [loadingUser, setLoadingUser] = useState(true);
   const [actionLoading, setActionLoading] = useState<{
     id: string;
@@ -129,6 +151,11 @@ export default function AppointmentsPage() {
   const [completedAppointmentId, setCompletedAppointmentId] = useState<
     string | null
   >(null);
+  const [paymentStep, setPaymentStep] = useState<"invoice" | "confirm">(
+    "invoice",
+  );
+  const [sendingInvoice, setSendingInvoice] = useState(false);
+  const [createdPaymentId, setCreatedPaymentId] = useState<string | null>(null);
 
   // Prescription Form State
   const [diagnosis, setDiagnosis] = useState("");
@@ -146,6 +173,9 @@ export default function AppointmentsPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isFollowUpOpen, setIsFollowUpOpen] = useState(false);
+  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
+  const [summaryDate, setSummaryDate] = useState<Date>(new Date());
 
   const isDoctor = userData?.role === "DOCTOR";
 
@@ -227,6 +257,10 @@ export default function AppointmentsPage() {
         if (response.ok) {
           const data = await response.json();
           setUserData(data.user);
+          // Set doctor profile if available (for doctors)
+          if (data.doctorProfile) {
+            setDoctorProfile(data.doctorProfile);
+          }
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -406,9 +440,16 @@ export default function AppointmentsPage() {
     }
   };
 
-  const handlePaymentConfirm = async (paymentReceived: boolean) => {
+  // Step 1: Send invoice email to patient, create pending payment
+  const handleSendInvoice = async () => {
     if (!completedAppointmentId) return;
+    const amount = parseFloat(paymentAmount);
+    if (!amount || amount <= 0) {
+      toast.error("Please enter a valid consultation fee");
+      return;
+    }
 
+    setSendingInvoice(true);
     try {
       const response = await fetch("/api/payments", {
         method: "POST",
@@ -416,35 +457,66 @@ export default function AppointmentsPage() {
         credentials: "include",
         body: JSON.stringify({
           appointmentId: completedAppointmentId,
-          amount: parseFloat(paymentAmount) || 500,
+          amount,
           paymentMethod: "CASH",
-          notes: paymentReceived
-            ? "Payment collected at clinic"
-            : "Payment pending",
-          isPaid: paymentReceived,
+          notes: "Invoice sent to patient",
+          isPaid: false,
         }),
       });
 
       if (response.ok) {
-        toast.success(
-          paymentReceived
-            ? "Payment recorded successfully!"
-            : "Payment marked as pending",
-        );
-        // Refresh appointments to reflect payment status change
-        fetchAppointments();
+        const data = await response.json();
+        setCreatedPaymentId(data.payment?.id || null);
+        toast.success("Invoice sent to patient's email!");
+        setPaymentStep("confirm");
       } else {
-        toast.error("Failed to record payment");
+        toast.error("Failed to send invoice");
       }
     } catch {
-      toast.error("Failed to record payment");
+      toast.error("Failed to send invoice");
+    } finally {
+      setSendingInvoice(false);
+    }
+  };
+
+  // Step 2: Confirm if patient has paid
+  const handlePaymentConfirm = async (paymentReceived: boolean) => {
+    if (!completedAppointmentId) return;
+
+    if (paymentReceived && createdPaymentId) {
+      try {
+        // Mark the existing payment as paid
+        const response = await fetch("/api/payments", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            paymentId: createdPaymentId,
+            status: "PAID",
+          }),
+        });
+
+        if (response.ok) {
+          toast.success("Payment recorded successfully!");
+          fetchAppointments();
+        } else {
+          toast.error("Failed to record payment");
+        }
+      } catch {
+        toast.error("Failed to record payment");
+      }
+    } else {
+      toast.success("Payment marked as pending");
+      fetchAppointments();
     }
 
-    // Close payment dialog
+    // Close payment dialog and reset
     setDialogType(null);
     setCompletedAppointmentId(null);
-    setPaymentAmount("500");
+    setPaymentAmount("Enter the fee");
     setCopiedUPI(false);
+    setPaymentStep("invoice");
+    setCreatedPaymentId(null);
   };
 
   const copyToClipboard = (text: string) => {
@@ -650,6 +722,106 @@ export default function AppointmentsPage() {
     });
   };
 
+  const formatInputDate = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+  const parseLocalDate = (value: string) => {
+    const [year, month, day] = value.split("-").map(Number);
+    if (!year || !month || !day) return undefined;
+    return new Date(year, month - 1, day);
+  };
+
+  const followUpSelectedDate = followUpDate
+    ? parseLocalDate(followUpDate)
+    : undefined;
+
+  const getLocalDateKey = (value: string | Date) => {
+    const date = new Date(value);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  };
+
+  const summaryKey = getLocalDateKey(summaryDate);
+  const summaryLabel = summaryDate.toLocaleDateString("en-IN", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const selectedDateAppointments = appointments.filter(
+    (appointment) =>
+      getLocalDateKey(appointment.appointmentDate) === summaryKey,
+  );
+  const selectedBookedCount = selectedDateAppointments.filter(
+    (appointment) =>
+      appointment.status !== "CANCELLED" && appointment.status !== "DECLINED",
+  ).length;
+  const selectedRemainingCount = selectedDateAppointments.filter(
+    (appointment) =>
+      ["PENDING", "SCHEDULED", "RESCHEDULED"].includes(appointment.status),
+  ).length;
+  const selectedCompletedCount = selectedDateAppointments.filter(
+    (appointment) => appointment.status === "COMPLETED",
+  ).length;
+  const completedSelectedAppointments = selectedDateAppointments.filter(
+    (appointment) => appointment.status === "COMPLETED",
+  );
+
+  const visibleAppointments = showSelectedOnly
+    ? selectedDateAppointments
+    : appointments;
+
+  const csvEscape = (value: string) => {
+    const stringValue = value ?? "";
+    if (
+      stringValue.includes(",") ||
+      stringValue.includes('"') ||
+      stringValue.includes("\n")
+    ) {
+      return `"${stringValue.replace(/\"/g, '""')}"`;
+    }
+    return stringValue;
+  };
+
+  const handleDownloadSelectedCompleted = () => {
+    if (!completedSelectedAppointments.length) {
+      toast.info("No completed appointments for this date yet.");
+      return;
+    }
+
+    const rows = [
+      ["Patient Name", "Symptoms", "Address", "Phone", "Medicine Prescribed"],
+      ...completedSelectedAppointments.map((appointment) => {
+        const patientName = appointment.patient?.user?.name || "";
+        const symptoms = appointment.symptoms || "";
+        const address = appointment.patient?.address || "";
+        const rawPhone = appointment.patient?.user?.phone || "";
+        const phone = rawPhone ? `="${rawPhone}"` : "";
+        const medications =
+          appointment.prescription?.medications
+            ?.map((med) =>
+              [med.medicineName, med.dosage, med.frequency, med.duration]
+                .filter(Boolean)
+                .join(" "),
+            )
+            .join(" | ") || "";
+
+        return [patientName, symptoms, address, phone, medications];
+      }),
+    ];
+
+    const csvContent = rows
+      .map((row) => row.map((value) => csvEscape(value)).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `completed-${summaryKey}.csv`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+    toast.success("Completed appointments exported.");
+  };
+
   return (
     <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
       <Card className="border-border">
@@ -663,6 +835,11 @@ export default function AppointmentsPage() {
                 ? "Manage and update patient appointments."
                 : "Review your upcoming and past appointments."}
             </CardDescription>
+            {isDoctor && showSelectedOnly && (
+              <Badge variant="outline" className="mt-2 w-fit">
+                Showing selected date only
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button
@@ -671,12 +848,82 @@ export default function AppointmentsPage() {
               onClick={handleRefresh}
               disabled={isRefreshing}
               title="Refresh appointments"
-              className="shrink-0"
             >
               <RefreshCw
                 className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
               />
             </Button>
+            {isDoctor && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0"
+                    title="Date appointment summary"
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Date summary</p>
+                      <Badge variant="outline" className="text-[11px]">
+                        {summaryLabel}
+                      </Badge>
+                    </div>
+                    <DatePicker
+                      mode="single"
+                      selected={summaryDate}
+                      onSelect={(date) => date && setSummaryDate(date)}
+                      initialFocus
+                    />
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Booked</span>
+                        <span className="font-semibold">
+                          {selectedBookedCount}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">
+                          Need to see
+                        </span>
+                        <span className="font-semibold">
+                          {selectedRemainingCount}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Completed</span>
+                        <span className="font-semibold">
+                          {selectedCompletedCount}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowSelectedOnly((prev) => !prev)}
+                      >
+                        {showSelectedOnly
+                          ? "Show all appointments"
+                          : "Show selected date"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleDownloadSelectedCompleted}
+                        disabled={!completedSelectedAppointments.length}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Excel (CSV)
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
             {!loadingUser && !isDoctor && (
               <Button
                 asChild
@@ -696,13 +943,17 @@ export default function AppointmentsPage() {
             <div className="flex items-center justify-center py-10">
               <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>
-          ) : appointments.length === 0 ? (
+          ) : visibleAppointments.length === 0 ? (
             <div className="py-8 text-center">
-              <p className="text-muted-foreground">No appointments found.</p>
+              <p className="text-muted-foreground">
+                {showSelectedOnly
+                  ? "No appointments found for selected date."
+                  : "No appointments found."}
+              </p>
             </div>
           ) : (
             <div className="space-y-3 sm:space-y-4">
-              {appointments.map((appointment) => (
+              {visibleAppointments.map((appointment) => (
                 <div
                   key={appointment.id}
                   className="rounded-lg border border-border p-3 sm:p-4 space-y-3"
@@ -1037,6 +1288,7 @@ export default function AppointmentsPage() {
         onOpenChange={() => {
           setDialogType(null);
           setSelectedAppointment(null);
+          setIsFollowUpOpen(false);
         }}
       >
         <DialogContent
@@ -1068,12 +1320,48 @@ export default function AppointmentsPage() {
                 <label className="text-sm font-medium">
                   Follow-up Date <span className="text-red-500">*</span>
                 </label>
-                <Input
-                  type="date"
-                  value={followUpDate}
-                  onChange={(e) => setFollowUpDate(e.target.value)}
-                  min={new Date().toISOString().split("T")[0]}
-                />
+                <Popover
+                  open={isFollowUpOpen}
+                  onOpenChange={setIsFollowUpOpen}
+                  modal={true}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {followUpSelectedDate ? (
+                        followUpSelectedDate.toLocaleDateString("en-IN", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Pick a date
+                        </span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    className="w-auto p-0 z-[10002]"
+                    sideOffset={6}
+                  >
+                    <DatePicker
+                      mode="single"
+                      selected={followUpSelectedDate}
+                      onSelect={(date) =>
+                        date && setFollowUpDate(formatInputDate(date))
+                      }
+                      disabled={(date) =>
+                        date < new Date(new Date().setHours(0, 0, 0, 0))
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
@@ -1643,129 +1931,213 @@ export default function AppointmentsPage() {
         onOpenChange={() => {
           setDialogType(null);
           setCompletedAppointmentId(null);
-          setPaymentAmount("500");
+          setPaymentAmount("Enter the fee");
           setCopiedUPI(false);
+          setPaymentStep("invoice");
+          setCreatedPaymentId(null);
         }}
       >
         <DialogContent
           style={{ backgroundColor: "white" }}
           className="max-w-md p-0 overflow-hidden"
         >
-          {/* Header */}
-          <div className="px-6 pt-6 pb-4">
-            <DialogHeader className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                  <Banknote className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <DialogTitle className="text-lg font-semibold">
-                    Confirm Payment
-                  </DialogTitle>
-                  <DialogDescription className="text-sm mt-0.5">
-                    Has the patient made the payment?
-                  </DialogDescription>
-                </div>
-              </div>
-            </DialogHeader>
-          </div>
-
-          {/* Content */}
-          <div className="px-6 pb-4 space-y-5">
-            {/* Payment Amount */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">
-                Consultation Fee
-              </label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
-                  ₹
-                </span>
-                <Input
-                  type="number"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  className="pl-8 h-12 text-xl font-semibold border-2 focus:border-primary"
-                  placeholder="Enter the Fee Amount"
-                />
-              </div>
-            </div>
-
-            {/* UPI Payment Info */}
-            <div className="rounded-xl border-2 border-gray-100 bg-gray-50/50 p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <span className="text-primary font-bold text-sm">₹</span>
-                </div>
-                <span className="font-semibold text-foreground">
-                  UPI Payment Details
-                </span>
+          {paymentStep === "invoice" ? (
+            <>
+              {/* Step 1: Send Invoice */}
+              <div className="px-6 pt-6 pb-4">
+                <DialogHeader className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Send className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-lg font-semibold">
+                        Send Invoice
+                      </DialogTitle>
+                      <DialogDescription className="text-sm mt-0.5">
+                        Enter the consultation fee and send the invoice to the
+                        patient
+                      </DialogDescription>
+                    </div>
+                  </div>
+                </DialogHeader>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">UPI ID</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium bg-white px-3 py-1.5 rounded-lg border border-gray-200">
-                      7778878653-6@ybl
+              <div className="px-6 pb-4 space-y-5">
+                {/* Payment Amount */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">
+                    Consultation Fee
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
+                      ₹
                     </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 hover:bg-gray-200"
-                      onClick={() => copyToClipboard("7778878653-6@ybl")}
-                    >
-                      {copiedUPI ? (
-                        <Check className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <Copy className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </Button>
+                    <Input
+                      type="number"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      className="pl-8 h-12 text-xl font-semibold border-2 focus:border-primary"
+                      placeholder="Enter the Fee Amount"
+                    />
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Name</span>
-                  <span className="font-medium text-foreground">
-                    Dr. Farheen Husain
-                  </span>
+                {/* UPI Payment Info */}
+                <div className="rounded-xl border-2 border-gray-100 bg-gray-50/50 p-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <span className="text-primary font-bold text-sm">₹</span>
+                    </div>
+                    <span className="font-semibold text-foreground">
+                      UPI Payment Details
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        UPI ID
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium bg-white px-3 py-1.5 rounded-lg border border-gray-200">
+                          {doctorProfile?.upiId || "Not configured"}
+                        </span>
+                        {doctorProfile?.upiId && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 hover:bg-gray-200"
+                            onClick={() => copyToClipboard(doctorProfile.upiId)}
+                          >
+                            {copiedUPI ? (
+                              <Check className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <Copy className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Name
+                      </span>
+                      <span className="font-medium text-foreground">
+                        Dr. {userData?.name || "Unknown"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Today's Collection Preview */}
-            <div className="rounded-xl bg-green-50 border border-green-100 p-4 flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                <TrendingUp className="h-4 w-4 text-green-600" />
+              {/* Footer - Send Invoice */}
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                <Button
+                  onClick={handleSendInvoice}
+                  disabled={
+                    sendingInvoice ||
+                    !paymentAmount ||
+                    parseFloat(paymentAmount) <= 0
+                  }
+                  className="w-full h-11 bg-blue-500 hover:bg-blue-600 text-white font-medium"
+                >
+                  {sendingInvoice ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending Invoice...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Invoice
+                    </>
+                  )}
+                </Button>
               </div>
-              <p className="text-sm text-green-700">
-                Recording this payment will add{" "}
-                <span className="font-semibold">₹{paymentAmount || 0}</span> to
-                today&apos;s collection
-              </p>
-            </div>
-          </div>
+            </>
+          ) : (
+            <>
+              {/* Step 2: Confirm Payment */}
+              <div className="px-6 pt-6 pb-4">
+                <DialogHeader className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                      <Banknote className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-lg font-semibold">
+                        Confirm Payment
+                      </DialogTitle>
+                      <DialogDescription className="text-sm mt-0.5">
+                        Invoice sent! Has the patient made the payment?
+                      </DialogDescription>
+                    </div>
+                  </div>
+                </DialogHeader>
+              </div>
 
-          {/* Footer */}
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => handlePaymentConfirm(false)}
-                className="flex-1 h-11 font-medium"
-              >
-                Not Paid Yet
-              </Button>
-              <Button
-                onClick={() => handlePaymentConfirm(true)}
-                className="flex-1 h-11 bg-green-500 hover:bg-green-600 text-white font-medium"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Payment Received
-              </Button>
-            </div>
-          </div>
+              <div className="px-6 pb-4 space-y-5">
+                {/* Patient & Amount Info */}
+                <div className="rounded-xl border-2 border-gray-100 bg-gray-50/50 p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Patient
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      {completedAppointmentId
+                        ? appointments.find(
+                            (a) => a.id === completedAppointmentId,
+                          )?.patient?.user?.name || "Patient"
+                        : "Patient"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Amount
+                    </span>
+                    <span className="text-2xl font-bold text-foreground">
+                      ₹{paymentAmount}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Today's Collection Preview */}
+                <div className="rounded-xl bg-green-50 border border-green-100 p-4 flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                  </div>
+                  <p className="text-sm text-green-700">
+                    Recording this payment will add{" "}
+                    <span className="font-semibold">₹{paymentAmount || 0}</span>{" "}
+                    to today&apos;s collection
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer - Paid / Not Paid */}
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => handlePaymentConfirm(false)}
+                    className="flex-1 h-11 font-medium"
+                  >
+                    Not Paid
+                  </Button>
+                  <Button
+                    onClick={() => handlePaymentConfirm(true)}
+                    className="flex-1 h-11 bg-green-500 hover:bg-green-600 text-white font-medium"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Paid
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
       {/* View Prescription Dialog */}

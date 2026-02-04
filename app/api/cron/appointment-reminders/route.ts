@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { appointments, patientProfiles, users } from "@/lib/db/schema";
 import { eq, and, gte, lt } from "drizzle-orm";
 import { sendAppointmentReminderEmail } from "@/lib/email";
+import { getDoctorById } from "@/lib/doctor";
 import {
   formatDateIST,
   formatTimeString,
@@ -47,13 +48,17 @@ export async function GET(req: NextRequest) {
     const timeStr = `${String(currentHours).padStart(2, "0")}:${String(currentMinutes).padStart(2, "0")}`;
 
     console.log(`[Reminder CRON] Running at IST: ${dateStr} ${timeStr}`);
-    console.log(`[Reminder CRON] Current minutes from midnight: ${currentMinutesFromMidnight}`);
+    console.log(
+      `[Reminder CRON] Current minutes from midnight: ${currentMinutesFromMidnight}`,
+    );
 
     // Get today's date range for query using proper IST boundaries
     const todayStart = getStartOfDayIST(new Date());
     const todayEnd = getEndOfDayIST(new Date());
 
-    console.log(`[Reminder CRON] Query range (UTC): ${todayStart.toISOString()} to ${todayEnd.toISOString()}`);
+    console.log(
+      `[Reminder CRON] Query range (UTC): ${todayStart.toISOString()} to ${todayEnd.toISOString()}`,
+    );
 
     // Find all scheduled appointments for today that haven't had reminders sent
     const scheduledAppointments = await db
@@ -64,6 +69,7 @@ export async function GET(req: NextRequest) {
         status: appointments.status,
         reminderSent: appointments.reminderSent,
         patientId: appointments.patientId,
+        doctorId: appointments.doctorId,
       })
       .from(appointments)
       .where(
@@ -75,7 +81,9 @@ export async function GET(req: NextRequest) {
         ),
       );
 
-    console.log(`[Reminder CRON] Found ${scheduledAppointments.length} appointments needing reminder check`);
+    console.log(
+      `[Reminder CRON] Found ${scheduledAppointments.length} appointments needing reminder check`,
+    );
 
     let remindersSent = 0;
     const errors: string[] = [];
@@ -97,7 +105,9 @@ export async function GET(req: NextRequest) {
         // Send reminder if appointment is 15-45 minutes away
         // This window ensures we catch it when cron runs every 15 minutes
         if (timeDiffMinutes >= 15 && timeDiffMinutes <= 45) {
-          console.log(`[Reminder CRON] Sending reminder for appointment ${appointment.id}`);
+          console.log(
+            `[Reminder CRON] Sending reminder for appointment ${appointment.id}`,
+          );
 
           // Get patient details
           const patientProfile = await db.query.patientProfiles.findFirst({
@@ -112,10 +122,9 @@ export async function GET(req: NextRequest) {
             continue;
           }
 
-          // Get doctor name
-          const doctor = await db.query.users.findFirst({
-            where: eq(users.role, "DOCTOR"),
-          });
+          const doctor = appointment.doctorId
+            ? await getDoctorById(appointment.doctorId)
+            : null;
 
           // Send reminder email
           const emailSent = await sendAppointmentReminderEmail(
@@ -125,6 +134,7 @@ export async function GET(req: NextRequest) {
             formatTimeString(appointment.appointmentTime),
             doctor?.name || "Doctor",
             CLINIC_NAME,
+            doctor?.clinicAddress || undefined,
           );
 
           if (emailSent) {
@@ -139,11 +149,16 @@ export async function GET(req: NextRequest) {
               `[Reminder CRON] Reminder sent for appointment ${appointment.id} to ${patientProfile.user.email}`,
             );
           } else {
-            errors.push(`Failed to send email for appointment ${appointment.id}`);
+            errors.push(
+              `Failed to send email for appointment ${appointment.id}`,
+            );
           }
         }
       } catch (error) {
-        console.error(`[Reminder CRON] Error processing appointment ${appointment.id}:`, error);
+        console.error(
+          `[Reminder CRON] Error processing appointment ${appointment.id}:`,
+          error,
+        );
         errors.push(`Error for appointment ${appointment.id}: ${error}`);
       }
     }

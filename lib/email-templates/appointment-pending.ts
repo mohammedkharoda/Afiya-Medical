@@ -3,8 +3,14 @@
 import { EMAIL_CONFIG } from "./config";
 import { getEmailWrapper, getEmailHeader, getEmailFooter } from "./layout";
 
-const { primaryColor, warningColor, textPrimary, textSecondary, bgLight, bgWarning } =
-  EMAIL_CONFIG;
+const {
+  primaryColor,
+  warningColor,
+  textPrimary,
+  textSecondary,
+  bgLight,
+  bgWarning,
+} = EMAIL_CONFIG;
 
 interface AppointmentPendingTemplateData {
   patientName: string;
@@ -12,6 +18,7 @@ interface AppointmentPendingTemplateData {
   time: string;
   doctorName: string;
   clinicName: string;
+  clinicAddress?: string;
 }
 
 /**
@@ -25,6 +32,7 @@ export const getAppointmentPendingTemplate = ({
   time,
   doctorName,
   clinicName,
+  clinicAddress,
 }: AppointmentPendingTemplateData): string => {
   return getEmailWrapper(`
     ${getEmailHeader("Appointment Request Received")}
@@ -38,7 +46,7 @@ export const getAppointmentPendingTemplate = ({
         <p style="margin: 8px 0;"><strong>Requested Date:</strong> ${date}</p>
         <p style="margin: 8px 0;"><strong>Requested Time:</strong> ${time} (IST)</p>
         <p style="margin: 8px 0;"><strong>Doctor:</strong> ${doctorName}</p>
-        <p style="margin: 8px 0;"><strong>Location:</strong> ${clinicName}</p>
+        <p style="margin: 8px 0;"><strong>Location:</strong> ${clinicAddress || clinicName}</p>
       </div>
 
       <!-- Pending Notice -->
@@ -49,7 +57,7 @@ export const getAppointmentPendingTemplate = ({
 
       <p style="color: ${textSecondary}; font-size: 14px;">Thank you for choosing ${clinicName}!</p>
     </div>
-    ${getEmailFooter()}
+    ${getEmailFooter({ address: clinicAddress })}
   `);
 };
 

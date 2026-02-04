@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { db, users, verifications, patientProfiles } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { registerSchema } from "@/lib/validations/auth";
 import { sendOtpEmail } from "@/lib/email";
@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
       address,
       emergencyContact,
       bloodGroup,
+      preferredDoctorId,
     } = validatedData;
 
     // Always register as PATIENT - doctors are created via seed script
@@ -50,9 +51,9 @@ export async function POST(req: NextRequest) {
     }
     const emergencyE164 = parsedEmergency.format("E.164");
 
-    // Check if user already exists
+    // Check if user already exists (case-insensitive)
     const existingUser = await db.query.users.findFirst({
-      where: eq(users.email, email),
+      where: ilike(users.email, email),
     });
 
     if (existingUser) {
@@ -62,18 +63,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate preferred doctor exists if provided
+    if (preferredDoctorId) {
+      const doctorExists = await db.query.users.findFirst({
+        where: eq(users.id, preferredDoctorId),
+      });
+
+      if (!doctorExists || doctorExists.role !== "DOCTOR") {
+        return NextResponse.json(
+          {
+            error:
+              "Selected doctor is not valid. Please select another doctor.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Generate verification token
     const verificationToken = randomUUID();
 
-    // Create user with all custom fields
+    // Create user with all custom fields (store original email case)
     const [user] = await db
       .insert(users)
       .values({
         name,
-        email: email.toLowerCase().trim(),
+        email,
         password: hashedPassword,
         phone: phoneE164,
         role,
@@ -91,6 +109,7 @@ export async function POST(req: NextRequest) {
     // Create patient profile with the additional information
     await db.insert(patientProfiles).values({
       userId: user.id,
+      preferredDoctorId: preferredDoctorId || null,
       dob: new Date(dob),
       gender,
       address,
@@ -120,7 +139,7 @@ export async function POST(req: NextRequest) {
       .insert(verifications)
       .values({ identifier: token, value: phoneE164, expiresAt });
 
-    // Send OTP via email
+    // Send OTP via email (using original email case for delivery)
     try {
       console.log(`Sending OTP email to ${email} with code ${otp}`);
       const emailSent = await sendOtpEmail(email, otp);
@@ -144,6 +163,26 @@ export async function POST(req: NextRequest) {
     if (error.name === "ZodError") {
       return NextResponse.json(
         { error: "Invalid input data", details: error.errors },
+        { status: 400 },
+      );
+    }
+
+    // Handle database constraint errors
+    if (error.code === "23503" || error.message?.includes("foreign key")) {
+      return NextResponse.json(
+        {
+          error: "Selected doctor is not valid. Please refresh and try again.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      error.code === "23505" ||
+      error.message?.includes("unique constraint")
+    ) {
+      return NextResponse.json(
+        { error: "User with this email already exists" },
         { status: 400 },
       );
     }

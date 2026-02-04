@@ -12,6 +12,7 @@ interface AppointmentReminderTemplateData {
   time: string;
   doctorName: string;
   clinicName: string;
+  clinicAddress?: string;
 }
 
 /**
@@ -28,6 +29,7 @@ export const getAppointmentReminderTemplate = ({
   time,
   doctorName,
   clinicName,
+  clinicAddress,
 }: AppointmentReminderTemplateData): string => {
   return getEmailWrapper(`
     ${getEmailHeader("Appointment Reminder")}
@@ -46,7 +48,7 @@ export const getAppointmentReminderTemplate = ({
         <p style="margin: 8px 0;"><strong>Date:</strong> ${date}</p>
         <p style="margin: 8px 0;"><strong>Time:</strong> ${time} (IST)</p>
         <p style="margin: 8px 0;"><strong>Doctor:</strong> ${doctorName}</p>
-        <p style="margin: 8px 0;"><strong>Location:</strong> ${clinicName}</p>
+        <p style="margin: 8px 0;"><strong>Location:</strong> ${clinicAddress || clinicName}</p>
       </div>
       
       <!-- Tip Box -->
@@ -54,7 +56,7 @@ export const getAppointmentReminderTemplate = ({
         <p style="margin: 0; color: #1e40af;"><strong>Tip:</strong> Please ensure you arrive on time. Bring any relevant medical documents or reports.</p>
       </div>
     </div>
-    ${getEmailFooter()}
+    ${getEmailFooter({ address: clinicAddress })}
   `);
 };
 

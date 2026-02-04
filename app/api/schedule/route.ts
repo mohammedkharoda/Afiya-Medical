@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, doctorSchedule } from "@/lib/db";
-import { eq, asc, gte, lt, and } from "drizzle-orm";
+import { eq, asc, gte, lt, and, or, isNull } from "drizzle-orm";
 import { getSession } from "@/lib/session";
 
 export async function GET(req: NextRequest) {
@@ -15,13 +15,31 @@ export async function GET(req: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const schedule = await db.query.doctorSchedule.findMany({
-      where: and(
-        gte(doctorSchedule.scheduleDate, today),
-        eq(doctorSchedule.isActive, true),
-      ),
-      orderBy: [asc(doctorSchedule.scheduleDate)],
-    });
+    const userId = session.user.id;
+    const role = session.user.role;
+
+    let schedule;
+
+    if (role === "DOCTOR") {
+      // Doctors only see their own schedules
+      schedule = await db.query.doctorSchedule.findMany({
+        where: and(
+          gte(doctorSchedule.scheduleDate, today),
+          eq(doctorSchedule.isActive, true),
+          eq(doctorSchedule.doctorId, userId),
+        ),
+        orderBy: [asc(doctorSchedule.scheduleDate)],
+      });
+    } else {
+      // Admins and patients see all active schedules
+      schedule = await db.query.doctorSchedule.findMany({
+        where: and(
+          gte(doctorSchedule.scheduleDate, today),
+          eq(doctorSchedule.isActive, true),
+        ),
+        orderBy: [asc(doctorSchedule.scheduleDate)],
+      });
+    }
 
     return NextResponse.json({ schedule });
   } catch (error) {
@@ -70,21 +88,28 @@ export async function POST(req: NextRequest) {
 
     console.log("Saving schedule for date:", parsedDate.toISOString());
 
-    // Check if schedule for this date already exists (using range query)
+    const userId = session.user.id;
+
+    // Check if schedule for this date already exists for this doctor (using range query)
     const existingSchedule = await db.query.doctorSchedule.findFirst({
       where: and(
         gte(doctorSchedule.scheduleDate, parsedDate),
         lt(doctorSchedule.scheduleDate, nextDay),
+        or(
+          eq(doctorSchedule.doctorId, userId),
+          isNull(doctorSchedule.doctorId),
+        ),
       ),
     });
 
     let schedule;
 
     if (existingSchedule) {
-      // Update existing schedule
+      // Update existing schedule and assign to this doctor if not already assigned
       [schedule] = await db
         .update(doctorSchedule)
         .set({
+          doctorId: userId, // Assign to this doctor
           startTime,
           endTime,
           breakStartTime: breakStartTime || null,
@@ -97,10 +122,11 @@ export async function POST(req: NextRequest) {
         .where(eq(doctorSchedule.id, existingSchedule.id))
         .returning();
     } else {
-      // Create new schedule
+      // Create new schedule with doctorId
       [schedule] = await db
         .insert(doctorSchedule)
         .values({
+          doctorId: userId, // Assign to this doctor
           scheduleDate: parsedDate,
           startTime,
           endTime,
@@ -142,6 +168,27 @@ export async function DELETE(req: NextRequest) {
         { error: "Schedule ID is required" },
         { status: 400 },
       );
+    }
+
+    const userId = session.user.id;
+    const role = session.user.role;
+
+    // For doctors, verify they own this schedule
+    if (role === "DOCTOR") {
+      const existingSchedule = await db.query.doctorSchedule.findFirst({
+        where: eq(doctorSchedule.id, scheduleId),
+      });
+
+      if (
+        existingSchedule &&
+        existingSchedule.doctorId &&
+        existingSchedule.doctorId !== userId
+      ) {
+        return NextResponse.json(
+          { error: "You can only delete your own schedules" },
+          { status: 403 },
+        );
+      }
     }
 
     // Soft delete by setting isActive to false

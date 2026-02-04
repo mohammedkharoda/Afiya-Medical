@@ -20,6 +20,7 @@ interface AppointmentStatusTemplateData {
   status: "COMPLETED" | "CANCELLED" | "RESCHEDULED" | string;
   date: string;
   time: string;
+  clinicAddress?: string;
 }
 
 interface StatusConfig {
@@ -77,6 +78,7 @@ export const getAppointmentStatusTemplate = ({
   status,
   date,
   time,
+  clinicAddress,
 }: AppointmentStatusTemplateData): string => {
   const config = getStatusConfig(status, clinicName);
   const statusFormatted = status.charAt(0) + status.slice(1).toLowerCase();
@@ -109,7 +111,7 @@ export const getAppointmentStatusTemplate = ({
           : ""
       }
     </div>
-    ${getEmailFooter()}
+    ${getEmailFooter({ address: clinicAddress })}
   `);
 };
 

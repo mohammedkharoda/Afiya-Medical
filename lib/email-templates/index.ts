@@ -107,3 +107,9 @@ export {
   getAppointmentCancelledByPatientTemplate,
   getAppointmentCancelledByPatientSubject,
 } from "./appointment-cancelled-by-patient";
+
+// Doctor Invitation
+export {
+  getDoctorInvitationTemplate,
+  getDoctorInvitationSubject,
+} from "./doctor-invitation";

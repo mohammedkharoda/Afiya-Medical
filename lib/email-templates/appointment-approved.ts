@@ -21,6 +21,7 @@ interface AppointmentApprovedTemplateData {
   time: string;
   doctorName: string;
   clinicName: string;
+  clinicAddress?: string;
 }
 
 /**
@@ -34,6 +35,7 @@ export const getAppointmentApprovedTemplate = ({
   time,
   doctorName,
   clinicName,
+  clinicAddress,
 }: AppointmentApprovedTemplateData): string => {
   return getEmailWrapper(`
     ${getEmailHeader("Appointment Confirmed")}
@@ -51,7 +53,7 @@ export const getAppointmentApprovedTemplate = ({
         <p style="margin: 8px 0;"><strong>Date:</strong> ${date}</p>
         <p style="margin: 8px 0;"><strong>Time:</strong> ${time} (IST)</p>
         <p style="margin: 8px 0;"><strong>Doctor:</strong> ${doctorName}</p>
-        <p style="margin: 8px 0;"><strong>Location:</strong> ${clinicName}</p>
+        <p style="margin: 8px 0;"><strong>Location:</strong> ${clinicAddress || clinicName}</p>
       </div>
 
       <!-- Reminder Box -->
@@ -61,7 +63,7 @@ export const getAppointmentApprovedTemplate = ({
 
       <p style="color: ${textMuted}; font-size: 14px;">If you need to cancel your appointment, please do so at least 24 hours in advance through your patient portal.</p>
     </div>
-    ${getEmailFooter()}
+    ${getEmailFooter({ address: clinicAddress })}
   `);
 };
 

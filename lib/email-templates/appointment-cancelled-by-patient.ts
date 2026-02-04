@@ -11,6 +11,7 @@ interface AppointmentCancelledByPatientTemplateData {
   date: string;
   time: string;
   reason: string;
+  clinicAddress?: string;
 }
 
 /**
@@ -24,6 +25,7 @@ export const getAppointmentCancelledByPatientTemplate = ({
   date,
   time,
   reason,
+  clinicAddress,
 }: AppointmentCancelledByPatientTemplateData): string => {
   return getEmailWrapper(`
     ${getEmailHeader("Patient Cancelled Appointment")}
@@ -50,7 +52,7 @@ export const getAppointmentCancelledByPatientTemplate = ({
 
       <p style="color: ${textSecondary}; font-size: 14px;">This time slot is now available for other patients.</p>
     </div>
-    ${getEmailFooter()}
+    ${getEmailFooter({ address: clinicAddress })}
   `);
 };
 

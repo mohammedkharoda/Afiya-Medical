@@ -64,15 +64,18 @@ export async function POST(
       .where(eq(appointments.id, appointmentId))
       .returning();
 
-    // Send notification to patient
+    // Send notification to patient (pass doctorId for correct doctor info in email)
     const patientUserId = appointment.patient?.user?.id;
     if (patientUserId) {
       const formattedDate = format(appointment.appointmentDate, "MMMM d, yyyy");
+      // Use appointment's assigned doctor or the approving doctor
+      const doctorId = appointment.doctorId || session.user.id;
 
       notifyPatientAppointmentApproved(
         patientUserId,
         formattedDate,
         appointment.appointmentTime,
+        doctorId,
       ).catch((err) =>
         console.error("Error notifying patient of approval:", err),
       );

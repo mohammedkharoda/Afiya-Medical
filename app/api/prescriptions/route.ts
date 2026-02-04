@@ -46,27 +46,25 @@ export async function GET(req: NextRequest) {
         (p) => p.appointment.patientId === patientProfile.id,
       );
 
-      console.log("[PATIENT] Fetching doctor from database...");
-      // Fetch the doctor's details (Assuming single doctor or fetching first doctor found)
-      const doctor = await db.query.users.findFirst({
-        where: eq(users.role, "DOCTOR"),
-      });
-      console.log(
-        "[PATIENT] Doctor query result:",
-        JSON.stringify(doctor, null, 2),
+      // For each prescription, get the doctor from the appointment's doctorId
+      const enrichedPrescriptions = await Promise.all(
+        prescriptionsList.map(async (p) => {
+          let doctorName = "Dr. Health";
+          if (p.appointment?.doctorId) {
+            const doctor = await db.query.users.findFirst({
+              where: eq(users.id, p.appointment.doctorId),
+            });
+            if (doctor) {
+              doctorName = doctor.name;
+            }
+          }
+          return {
+            ...p,
+            doctorName,
+          };
+        }),
       );
-      const doctorName = doctor?.name || "Dr. Health";
-      console.log("[PATIENT] Using doctorName:", doctorName);
-
-      // Inject doctor name into each prescription
-      prescriptionsList = prescriptionsList.map((p) => ({
-        ...p,
-        doctorName: doctorName,
-      }));
-      console.log(
-        "[PATIENT] Sample prescription:",
-        JSON.stringify(prescriptionsList[0], null, 2),
-      );
+      prescriptionsList = enrichedPrescriptions;
     } else if (normalizedRole === "DOCTOR" || normalizedRole === "ADMIN") {
       prescriptionsList = await db.query.prescriptions.findMany({
         with: {
@@ -84,27 +82,25 @@ export async function GET(req: NextRequest) {
         orderBy: [desc(prescriptions.createdAt)],
       });
 
-      console.log("[DOCTOR/ADMIN] Fetching doctor from database...");
-      // Fetch the doctor's details for DOCTOR/ADMIN view as well
-      const doctor = await db.query.users.findFirst({
-        where: eq(users.role, "DOCTOR"),
-      });
-      console.log(
-        "[DOCTOR/ADMIN] Doctor query result:",
-        JSON.stringify(doctor, null, 2),
+      // For each prescription, get the doctor from the appointment's doctorId
+      const enrichedPrescriptions = await Promise.all(
+        prescriptionsList.map(async (p) => {
+          let doctorName = "Dr. Health";
+          if (p.appointment?.doctorId) {
+            const doctor = await db.query.users.findFirst({
+              where: eq(users.id, p.appointment.doctorId),
+            });
+            if (doctor) {
+              doctorName = doctor.name;
+            }
+          }
+          return {
+            ...p,
+            doctorName,
+          };
+        }),
       );
-      const doctorName = doctor?.name || "Dr. Health";
-      console.log("[DOCTOR/ADMIN] Using doctorName:", doctorName);
-
-      // Inject doctor name
-      prescriptionsList = prescriptionsList.map((p) => ({
-        ...p,
-        doctorName: doctorName,
-      }));
-      console.log(
-        "[DOCTOR/ADMIN] Sample prescription:",
-        JSON.stringify(prescriptionsList[0], null, 2),
-      );
+      prescriptionsList = enrichedPrescriptions;
     } else {
       return NextResponse.json({ error: "Invalid role" }, { status: 403 });
     }
@@ -148,10 +144,10 @@ export async function POST(req: NextRequest) {
       attachmentPublicId,
     } = body;
 
-    // Get appointment to get patientId
+    // Get appointment to get patientId and doctorId
     const appointment = await db.query.appointments.findFirst({
       where: eq(appointments.id, appointmentId),
-      columns: { patientId: true },
+      columns: { patientId: true, doctorId: true },
     });
 
     if (!appointment) {
@@ -200,48 +196,7 @@ export async function POST(req: NextRequest) {
       .set({ status: "COMPLETED" })
       .where(eq(appointments.id, appointmentId));
 
-    // Send prescription ready notification email
-    try {
-      // Get patient details for email
-      const fullAppointment = await db.query.appointments.findFirst({
-        where: eq(appointments.id, appointmentId),
-        with: {
-          patient: {
-            with: {
-              user: true,
-            },
-          },
-        },
-      });
-
-      if (fullAppointment?.patient?.user?.email) {
-        const { sendPrescriptionEmail } = await import("@/lib/email");
-
-        // Get doctor name
-        const doctor = await db.query.users.findFirst({
-          where: eq(users.role, "DOCTOR"),
-        });
-
-        await sendPrescriptionEmail({
-          patientEmail: fullAppointment.patient.user.email,
-          patientName: fullAppointment.patient.user.name,
-          doctorName: doctor?.name || "Doctor",
-          diagnosis,
-          medications: medicationsList || [],
-          notes,
-          followUpDate: followUpDate
-            ? new Date(followUpDate).toLocaleDateString()
-            : undefined,
-          attachmentUrl,
-          prescriptionDate: new Date().toLocaleDateString(),
-        });
-
-        console.log("Prescription email sent to patient");
-      }
-    } catch (emailError) {
-      console.error("Error sending prescription email:", emailError);
-      // Don't fail the request if email fails
-    }
+    // Prescription email is sent only after payment is confirmed (PATCH /api/payments)
 
     return NextResponse.json(
       { prescription: prescriptionWithMeds },

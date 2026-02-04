@@ -20,8 +20,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { toast } from "sonner";
-import { Loader2, Calendar, Clock, Save, Trash2, Plus } from "lucide-react";
+import {
+  Loader2,
+  Calendar as CalendarIcon,
+  Clock,
+  Save,
+  Trash2,
+  Plus,
+} from "lucide-react";
 import { format } from "date-fns";
 
 interface Schedule {
@@ -218,6 +231,69 @@ export default function SchedulePage() {
     setShowForm(true);
   };
 
+  const timeOptions = Array.from({ length: 24 * 4 }, (_, index) => {
+    const totalMinutes = index * 15;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const value = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+    const displayDate = new Date();
+    displayDate.setHours(hours, minutes, 0, 0);
+    const label = displayDate.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return { value, label };
+  });
+
+  const timeToMinutes = (time: string) => {
+    const [hours, minutes] = time.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const startMinutes = timeToMinutes(formData.startTime);
+  const endMinutes = timeToMinutes(formData.endTime);
+
+  const breakTimeOptions = timeOptions.filter((option) => {
+    const minutes = timeToMinutes(option.value);
+    return minutes >= startMinutes && minutes <= endMinutes;
+  });
+
+  const selectedDate = formData.scheduleDate
+    ? new Date(formData.scheduleDate)
+    : undefined;
+
+  useEffect(() => {
+    const breakStartMinutes = formData.breakStartTime
+      ? timeToMinutes(formData.breakStartTime)
+      : null;
+    const breakEndMinutes = formData.breakEndTime
+      ? timeToMinutes(formData.breakEndTime)
+      : null;
+
+    if (
+      (breakStartMinutes !== null &&
+        (breakStartMinutes < startMinutes || breakStartMinutes > endMinutes)) ||
+      (breakEndMinutes !== null &&
+        (breakEndMinutes < startMinutes || breakEndMinutes > endMinutes))
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        breakStartTime:
+          breakStartMinutes !== null &&
+          breakStartMinutes >= startMinutes &&
+          breakStartMinutes <= endMinutes
+            ? prev.breakStartTime
+            : "",
+        breakEndTime:
+          breakEndMinutes !== null &&
+          breakEndMinutes >= startMinutes &&
+          breakEndMinutes <= endMinutes
+            ? prev.breakEndTime
+            : "",
+      }));
+    }
+  }, [formData.startTime, formData.endTime, startMinutes, endMinutes]);
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return format(date, "MMMM d, yyyy");
@@ -259,7 +335,7 @@ export default function SchedulePage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
+            <CalendarIcon className="h-5 w-5" />
             Upcoming Schedules
           </CardTitle>
           <CardDescription>
@@ -269,7 +345,7 @@ export default function SchedulePage() {
         <CardContent>
           {schedules.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <CalendarIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>No schedules set yet.</p>
               <p className="text-sm">
                 Click &quot;Add Schedule&quot; to set your availability for
@@ -349,64 +425,145 @@ export default function SchedulePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="scheduleDate">Date *</Label>
-                <Input
-                  id="scheduleDate"
-                  type="date"
-                  value={formData.scheduleDate}
-                  min={format(new Date(), "yyyy-MM-dd")}
-                  onChange={(e) =>
-                    setFormData({ ...formData, scheduleDate: e.target.value })
-                  }
-                  disabled={!!editingSchedule}
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={
+                        "w-full justify-start text-left font-normal h-11"
+                      }
+                      disabled={!!editingSchedule}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? (
+                        format(selectedDate, "PPP")
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Pick a date
+                        </span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-auto p-0"
+                    align="start"
+                    side="top"
+                    sideOffset={6}
+                    collisionPadding={8}
+                    avoidCollisions={false}
+                    sticky="always"
+                  >
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      defaultMonth={selectedDate}
+                      numberOfMonths={1}
+                      onSelect={(date) => {
+                        if (!date) return;
+                        setFormData({
+                          ...formData,
+                          scheduleDate: format(date, "yyyy-MM-dd"),
+                        });
+                      }}
+                      disabled={(date) =>
+                        date < new Date(new Date().setHours(0, 0, 0, 0))
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="startTime">Start Time *</Label>
-                <Input
-                  id="startTime"
-                  type="time"
+                <Select
                   value={formData.startTime}
-                  onChange={(e) =>
-                    setFormData({ ...formData, startTime: e.target.value })
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, startTime: value })
                   }
-                />
+                >
+                  <SelectTrigger id="startTime">
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    {timeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="endTime">End Time *</Label>
-                <Input
-                  id="endTime"
-                  type="time"
+                <Select
                   value={formData.endTime}
-                  onChange={(e) =>
-                    setFormData({ ...formData, endTime: e.target.value })
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, endTime: value })
                   }
-                />
+                >
+                  <SelectTrigger id="endTime">
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    {timeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="breakStartTime">Break Start (Optional)</Label>
-                <Input
-                  id="breakStartTime"
-                  type="time"
-                  value={formData.breakStartTime}
-                  onChange={(e) =>
-                    setFormData({ ...formData, breakStartTime: e.target.value })
+                <Select
+                  value={formData.breakStartTime || "NONE"}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      breakStartTime: value === "NONE" ? "" : value,
+                    })
                   }
-                />
+                >
+                  <SelectTrigger id="breakStartTime">
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    <SelectItem value="NONE">No break</SelectItem>
+                    {breakTimeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="breakEndTime">Break End (Optional)</Label>
-                <Input
-                  id="breakEndTime"
-                  type="time"
-                  value={formData.breakEndTime}
-                  onChange={(e) =>
-                    setFormData({ ...formData, breakEndTime: e.target.value })
+                <Select
+                  value={formData.breakEndTime || "NONE"}
+                  onValueChange={(value) =>
+                    setFormData({
+                      ...formData,
+                      breakEndTime: value === "NONE" ? "" : value,
+                    })
                   }
-                />
+                >
+                  <SelectTrigger id="breakEndTime">
+                    <SelectValue placeholder="Select time" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    <SelectItem value="NONE">No break</SelectItem>
+                    {breakTimeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

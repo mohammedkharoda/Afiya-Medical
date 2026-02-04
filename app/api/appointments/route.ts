@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, appointments, patientProfiles } from "@/lib/db";
-import { eq, and, ne, gte, lt } from "drizzle-orm";
+import { db, appointments, patientProfiles, users } from "@/lib/db";
+import { eq, and, ne, gte, lt, or } from "drizzle-orm";
 import { getSession } from "@/lib/session";
 import {
   notifyPatientAppointmentPending,
@@ -26,9 +26,18 @@ export async function GET(req: NextRequest) {
 
     let appointmentsList;
 
-    if (role === "DOCTOR" || role === "ADMIN") {
-      // Doctor/Admin sees all appointments with patient info
+    if (role === "DOCTOR") {
+      // Doctor sees only appointments assigned to them or that they've handled
       appointmentsList = await db.query.appointments.findMany({
+        where: or(
+          // Appointments assigned to this doctor (any status)
+          eq(appointments.doctorId, userId),
+          // Appointments this doctor has handled (approved, declined, cancelled, rescheduled)
+          eq(appointments.approvedBy, userId),
+          eq(appointments.declinedBy, userId),
+          eq(appointments.cancelledBy, userId),
+          eq(appointments.rescheduledBy, userId),
+        ),
         with: {
           patient: {
             with: {
@@ -48,6 +57,9 @@ export async function GET(req: NextRequest) {
         "Appointments API - Doctor view, found:",
         appointmentsList.length,
       );
+    } else if (role === "ADMIN") {
+      // Admin only manages doctor invitations, no access to appointments
+      return NextResponse.json({ appointments: [] });
     } else {
       // Patient sees only their appointments
       const patientProfile = await db.query.patientProfiles.findFirst({
@@ -119,7 +131,22 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { appointmentDate, appointmentTime, symptoms, notes } = body;
+    const { appointmentDate, appointmentTime, symptoms, notes, doctorId } =
+      body;
+
+    // Validate doctorId if provided
+    if (doctorId) {
+      const doctor = await db.query.users.findFirst({
+        where: and(eq(users.id, doctorId), eq(users.role, "DOCTOR")),
+      });
+
+      if (!doctor) {
+        return NextResponse.json(
+          { error: "Selected doctor is not valid" },
+          { status: 400 },
+        );
+      }
+    }
 
     // Get patient profile
     const patientProfile = await db.query.patientProfiles.findFirst({
@@ -151,14 +178,21 @@ export async function POST(req: NextRequest) {
     const startOfDay = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
     const endOfDay = new Date(Date.UTC(year, month, day + 1, 0, 0, 0, 0));
 
-    // Race condition protection: Check if slot is still available
+    // Race condition protection: Check if slot is still available for this doctor
+    const slotCheckConditions = [
+      gte(appointments.appointmentDate, startOfDay),
+      lt(appointments.appointmentDate, endOfDay),
+      eq(appointments.appointmentTime, appointmentTime),
+      ne(appointments.status, "CANCELLED"),
+    ];
+
+    // If a specific doctor is selected, check only their slots
+    if (doctorId) {
+      slotCheckConditions.push(eq(appointments.doctorId, doctorId));
+    }
+
     const existingAppointment = await db.query.appointments.findFirst({
-      where: and(
-        gte(appointments.appointmentDate, startOfDay),
-        lt(appointments.appointmentDate, endOfDay),
-        eq(appointments.appointmentTime, appointmentTime),
-        ne(appointments.status, "CANCELLED"),
-      ),
+      where: and(...slotCheckConditions),
     });
 
     if (existingAppointment) {
@@ -176,6 +210,7 @@ export async function POST(req: NextRequest) {
       .insert(appointments)
       .values({
         patientId: patientProfile.id,
+        doctorId: doctorId || null, // Doctor patient selected or null for any doctor
         appointmentDate: new Date(appointmentDate),
         appointmentTime,
         symptoms,
@@ -195,12 +230,13 @@ export async function POST(req: NextRequest) {
       appointmentTime,
     ).catch((err) => console.error("Error notifying patient:", err));
 
-    // Notify doctor that approval is needed
+    // Notify doctor that approval is needed (pass doctorId if specified)
     notifyDoctorApprovalNeeded(
       session.user.id,
       formattedDate,
       appointmentTime,
       symptoms,
+      doctorId || undefined,
     ).catch((err) => console.error("Error notifying doctor:", err));
 
     // Trigger real-time update for doctor's dashboard

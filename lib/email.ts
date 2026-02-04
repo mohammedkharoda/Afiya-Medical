@@ -34,7 +34,11 @@ import {
   getAppointmentDeclinedSubject,
   getAppointmentCancelledByPatientTemplate,
   getAppointmentCancelledByPatientSubject,
+  // Doctor invitation
+  getDoctorInvitationTemplate,
+  getDoctorInvitationSubject,
 } from "./email-templates";
+import { getBillingTemplate } from "./email-templates/billing";
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -166,6 +170,7 @@ export async function sendAppointmentConfirmationEmail(
   time: string,
   doctorName: string,
   clinicName: string,
+  clinicAddress?: string,
 ) {
   try {
     const result = await resend.emails.send({
@@ -178,6 +183,7 @@ export async function sendAppointmentConfirmationEmail(
         time,
         doctorName,
         clinicName,
+        clinicAddress,
       }),
     });
 
@@ -206,6 +212,7 @@ export async function sendNewAppointmentAlertEmail(
   time: string,
   symptoms: string,
   clinicName: string,
+  clinicAddress?: string,
 ) {
   try {
     const result = await resend.emails.send({
@@ -218,6 +225,7 @@ export async function sendNewAppointmentAlertEmail(
         date,
         time,
         symptoms,
+        clinicAddress,
       }),
     });
 
@@ -245,6 +253,7 @@ export async function sendAppointmentStatusEmail(
   date: string,
   time: string,
   _clinicName: string,
+  clinicAddress?: string,
 ) {
   try {
     const result = await resend.emails.send({
@@ -256,6 +265,7 @@ export async function sendAppointmentStatusEmail(
         status,
         date,
         time,
+        clinicAddress,
       }),
     });
 
@@ -283,6 +293,7 @@ export async function sendAppointmentReminderEmail(
   time: string,
   doctorName: string,
   clinicName: string,
+  clinicAddress?: string,
 ) {
   try {
     const result = await resend.emails.send({
@@ -295,6 +306,7 @@ export async function sendAppointmentReminderEmail(
         time,
         doctorName,
         clinicName,
+        clinicAddress,
       }),
     });
 
@@ -330,6 +342,7 @@ interface PrescriptionEmailData {
   followUpDate?: string;
   attachmentUrl?: string;
   prescriptionDate: string;
+  clinicAddress?: string;
 }
 
 export async function sendPrescriptionEmail(
@@ -349,6 +362,7 @@ export async function sendPrescriptionEmail(
         followUpDate: data.followUpDate,
         attachmentUrl: data.attachmentUrl,
         prescriptionDate: data.prescriptionDate,
+        clinicAddress: data.clinicAddress,
       }),
     });
 
@@ -378,6 +392,7 @@ export async function sendAppointmentPendingEmail(
   time: string,
   doctorName: string,
   clinicName: string,
+  clinicAddress?: string,
 ) {
   try {
     const result = await resend.emails.send({
@@ -390,6 +405,7 @@ export async function sendAppointmentPendingEmail(
         time,
         doctorName,
         clinicName,
+        clinicAddress,
       }),
     });
 
@@ -418,6 +434,7 @@ export async function sendAppointmentApprovalRequestEmail(
   time: string,
   symptoms: string,
   clinicName: string,
+  clinicAddress?: string,
 ) {
   try {
     const result = await resend.emails.send({
@@ -431,6 +448,7 @@ export async function sendAppointmentApprovalRequestEmail(
         time,
         symptoms,
         clinicName,
+        clinicAddress,
       }),
     });
 
@@ -458,6 +476,7 @@ export async function sendAppointmentApprovedEmail(
   time: string,
   doctorName: string,
   clinicName: string,
+  clinicAddress?: string,
 ) {
   try {
     const result = await resend.emails.send({
@@ -470,6 +489,7 @@ export async function sendAppointmentApprovedEmail(
         time,
         doctorName,
         clinicName,
+        clinicAddress,
       }),
     });
 
@@ -497,6 +517,7 @@ export async function sendAppointmentDeclinedEmail(
   time: string,
   reason: string | undefined,
   clinicName: string,
+  clinicAddress?: string,
 ) {
   try {
     const result = await resend.emails.send({
@@ -509,6 +530,7 @@ export async function sendAppointmentDeclinedEmail(
         time,
         reason,
         clinicName,
+        clinicAddress,
       }),
     });
 
@@ -536,6 +558,7 @@ export async function sendAppointmentCancelledByPatientEmail(
   date: string,
   time: string,
   reason: string,
+  clinicAddress?: string,
 ) {
   try {
     const result = await resend.emails.send({
@@ -548,6 +571,7 @@ export async function sendAppointmentCancelledByPatientEmail(
         date,
         time,
         reason,
+        clinicAddress,
       }),
     });
 
@@ -560,6 +584,92 @@ export async function sendAppointmentCancelledByPatientEmail(
     return true;
   } catch (error) {
     console.error("Error sending patient cancellation email:", error);
+    return false;
+  }
+}
+
+// ============================================================================
+// DOCTOR INVITATION
+// ============================================================================
+
+export async function sendDoctorInvitationEmail(
+  email: string,
+  doctorName: string | undefined,
+  signupUrl: string,
+  expiresInDays: number,
+) {
+  try {
+    const result = await resend.emails.send({
+      from: getFromEmail(),
+      to: email,
+      subject: getDoctorInvitationSubject(),
+      html: getDoctorInvitationTemplate({
+        doctorName,
+        signupUrl,
+        expiresInDays,
+      }),
+    });
+
+    if (result.error) {
+      console.error("Resend error:", result.error);
+      return false;
+    }
+
+    console.log(`Doctor invitation email sent to ${email}`);
+    return true;
+  } catch (error) {
+    console.error("Error sending doctor invitation email:", error);
+    return false;
+  }
+}
+
+// ============================================================================
+// BILLING EMAIL
+// ============================================================================
+
+export interface BillingEmailData {
+  patientEmail: string;
+  patientName: string;
+  doctorName: string;
+  doctorSpeciality: string;
+  appointmentDate: string;
+  appointmentTime: string;
+  consultationFee: number;
+  upiId?: string;
+  upiQrCode?: string;
+  symptoms: string;
+  clinicAddress?: string;
+}
+
+export async function sendBillingEmail(data: BillingEmailData) {
+  try {
+    const result = await resend.emails.send({
+      from: getFromEmail(),
+      to: data.patientEmail,
+      subject: `Consultation Invoice - ${data.doctorName} | Afiya Medical Clinic`,
+      html: getBillingTemplate({
+        patientName: data.patientName,
+        doctorName: data.doctorName,
+        doctorSpeciality: data.doctorSpeciality,
+        appointmentDate: data.appointmentDate,
+        appointmentTime: data.appointmentTime,
+        consultationFee: data.consultationFee,
+        upiId: data.upiId,
+        upiQrCode: data.upiQrCode,
+        symptoms: data.symptoms,
+        clinicAddress: data.clinicAddress,
+      }),
+    });
+
+    if (result.error) {
+      console.error("Resend error:", result.error);
+      return false;
+    }
+
+    console.log(`Billing email sent to ${data.patientEmail}`);
+    return true;
+  } catch (error) {
+    console.error("Error sending billing email:", error);
     return false;
   }
 }

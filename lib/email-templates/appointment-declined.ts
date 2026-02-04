@@ -12,6 +12,7 @@ interface AppointmentDeclinedTemplateData {
   time: string;
   reason?: string;
   clinicName: string;
+  clinicAddress?: string;
 }
 
 /**
@@ -25,6 +26,7 @@ export const getAppointmentDeclinedTemplate = ({
   time,
   reason,
   clinicName,
+  clinicAddress,
 }: AppointmentDeclinedTemplateData): string => {
   const reasonSection = reason
     ? `
@@ -63,7 +65,7 @@ export const getAppointmentDeclinedTemplate = ({
 
       <p style="color: ${textSecondary}; font-size: 14px;">We apologize for any inconvenience. Thank you for your understanding.</p>
     </div>
-    ${getEmailFooter()}
+    ${getEmailFooter({ address: clinicAddress })}
   `);
 };
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, users, sessions } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { loginSchema } from "@/lib/validations/auth";
 import { createId } from "@paralleldrive/cuid2";
@@ -14,9 +14,9 @@ export async function POST(req: NextRequest) {
     const validatedData = loginSchema.parse(body);
     const { email, password } = validatedData;
 
-    // Find user by email
+    // Find user by email (case-insensitive)
     const user = await db.query.users.findFirst({
-      where: eq(users.email, email),
+      where: ilike(users.email, email),
     });
 
     if (!user) {

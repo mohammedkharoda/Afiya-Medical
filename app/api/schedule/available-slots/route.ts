@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const dateParam = searchParams.get("date");
+    const doctorId = searchParams.get("doctorId");
 
     if (!dateParam) {
       return NextResponse.json(
@@ -51,18 +52,35 @@ export async function GET(req: NextRequest) {
     // Set time to start of day for date comparison
     targetDate.setHours(0, 0, 0, 0);
 
-    // Get schedule for this specific date
-    const schedule = await db.query.doctorSchedule.findFirst({
-      where: and(
-        eq(doctorSchedule.scheduleDate, targetDate),
-        eq(doctorSchedule.isActive, true),
-      ),
-    });
+    // Get schedule for this specific date (optionally filtered by doctor)
+    let scheduleQuery;
+    if (doctorId) {
+      // Get schedule for specific doctor
+      scheduleQuery = await db.query.doctorSchedule.findFirst({
+        where: and(
+          eq(doctorSchedule.scheduleDate, targetDate),
+          eq(doctorSchedule.isActive, true),
+          eq(doctorSchedule.doctorId, doctorId),
+        ),
+      });
+    } else {
+      // Get any active schedule for this date
+      scheduleQuery = await db.query.doctorSchedule.findFirst({
+        where: and(
+          eq(doctorSchedule.scheduleDate, targetDate),
+          eq(doctorSchedule.isActive, true),
+        ),
+      });
+    }
+
+    const schedule = scheduleQuery;
 
     if (!schedule) {
       return NextResponse.json({
         availableSlots: [],
-        message: "No schedule available for this day",
+        message: doctorId
+          ? "This doctor has no schedule for this day"
+          : "No schedule available for this day",
       });
     }
 

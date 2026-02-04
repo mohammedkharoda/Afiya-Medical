@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, payments } from "@/lib/db";
-import { eq, desc } from "drizzle-orm";
+import { db, payments, appointments } from "@/lib/db";
+import { eq, desc, or } from "drizzle-orm";
 import { getSession } from "@/lib/session";
 
 export async function GET(req: NextRequest) {
@@ -11,9 +11,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userId = session.user.id;
+
     // Fetch user data to get role
     const user = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.id, session.user.id),
+      where: (users, { eq }) => eq(users.id, userId),
     });
 
     if (!user) {
@@ -23,7 +25,7 @@ export async function GET(req: NextRequest) {
     const normalizedRole = user.role?.toUpperCase();
 
     // Only doctors can view revenue
-    if (normalizedRole !== "DOCTOR" && normalizedRole !== "ADMIN") {
+    if (normalizedRole !== "DOCTOR") {
       return NextResponse.json(
         { error: "Only doctors can view revenue" },
         { status: 403 },
@@ -47,19 +49,62 @@ export async function GET(req: NextRequest) {
       startDate.setDate(startDate.getDate() - 30);
     }
 
-    // Fetch all paid payments
-    const allPayments = await db.query.payments.findMany({
+    // First, get appointment IDs that this doctor has handled
+    const doctorAppointments = await db.query.appointments.findMany({
+      where: or(
+        eq(appointments.approvedBy, userId),
+        eq(appointments.rescheduledBy, userId)
+      ),
+      columns: { id: true },
+    });
+
+    const appointmentIds = doctorAppointments.map((a) => a.id);
+
+    if (appointmentIds.length === 0) {
+      // No appointments handled by this doctor yet
+      return NextResponse.json({
+        totalRevenue: 0,
+        paidAmount: 0,
+        pendingAmount: 0,
+        todayRevenue: 0,
+        thisMonthRevenue: 0,
+        dailyBreakdown: [],
+        monthlyBreakdown: [],
+        paymentMethodBreakdown: [],
+        topEarningDays: [],
+        totalPayments: 0,
+        pendingPayments: 0,
+      });
+    }
+
+    // Fetch payments only for appointments this doctor has handled
+    const allPaymentsWithAppointment = await db.query.payments.findMany({
       where: eq(payments.status, "PAID"),
+      with: {
+        appointment: true,
+      },
       orderBy: [desc(payments.createdAt)],
     });
+
+    // Filter to only payments for this doctor's appointments
+    const allPayments = allPaymentsWithAppointment.filter(
+      (p) => appointmentIds.includes(p.appointmentId)
+    );
 
     // Calculate total revenue
     const totalRevenue = allPayments.reduce((sum, p) => sum + p.amount, 0);
 
-    // Get pending payments (completed appointments but not paid)
-    const pendingPayments = await db.query.payments.findMany({
+    // Get pending payments for this doctor's appointments
+    const pendingPaymentsWithAppointment = await db.query.payments.findMany({
       where: eq(payments.status, "PENDING"),
+      with: {
+        appointment: true,
+      },
     });
+
+    const pendingPayments = pendingPaymentsWithAppointment.filter(
+      (p) => appointmentIds.includes(p.appointmentId)
+    );
     const pendingAmount = pendingPayments.reduce((sum, p) => sum + p.amount, 0);
 
     // Daily breakdown

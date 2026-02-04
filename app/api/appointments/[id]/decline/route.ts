@@ -86,6 +86,7 @@ export async function POST(
         formattedDate,
         appointment.appointmentTime,
         reason.trim(),
+        appointment.doctorId || undefined,
       ).catch((err) =>
         console.error("Error notifying patient of decline:", err),
       );

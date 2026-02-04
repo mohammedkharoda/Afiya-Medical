@@ -26,10 +26,10 @@ export const getEmailHeader = (title: string) => `
 /**
  * Email footer with clinic name and disclaimer
  */
-export const getEmailFooter = () => `
+export const getEmailFooter = (options?: { address?: string }) => `
   <div style="text-align: center; margin-top: 20px; padding: 20px; color: ${textMuted}; font-size: 12px; border-top: 1px solid ${borderColor};">
     <p style="margin: 5px 0;">${clinicName}</p>
-    <p style="margin: 5px 0;">${address}</p>
+    <p style="margin: 5px 0;">${options?.address || address}</p>
     <p style="margin: 5px 0;">This is an automated email. Please do not reply to this message.</p>
   </div>
 `;

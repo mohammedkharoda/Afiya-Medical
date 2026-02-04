@@ -37,6 +37,12 @@ export const paymentMethodEnum = pgEnum("PaymentMethod", [
   "UPI_QR",
   "ONLINE",
 ]);
+export const invitationStatusEnum = pgEnum("InvitationStatus", [
+  "PENDING",
+  "ACCEPTED",
+  "EXPIRED",
+  "REVOKED",
+]);
 
 // Tables
 export const users = pgTable(
@@ -123,6 +129,34 @@ export const verifications = pgTable("verifications", {
     .notNull(),
 });
 
+// Doctor profile for specializations, payment info
+export const doctorProfiles = pgTable(
+  "doctor_profiles",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    speciality: text("speciality").notNull(), // e.g., "General Physician", "Cardiologist"
+    degrees: text("degrees").array().default([]).notNull(), // e.g., ["MBBS", "MD"]
+    experience: integer("experience"), // years of experience
+    upiId: text("upiId").notNull(), // Required for receiving payments, e.g., "doctor@upi"
+    upiQrCode: text("upiQrCode"), // Cloudinary URL for QR code image
+    clinicAddress: text("clinicAddress"), // Clinic address for patient emails
+    bio: text("bio"),
+    isTestAccount: boolean("isTestAccount").default(false).notNull(),
+    createdAt: timestamp("createdAt")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updatedAt")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [uniqueIndex("doctor_profiles_user_id_idx").on(table.userId)],
+);
+
 export const patientProfiles = pgTable(
   "patient_profiles",
   {
@@ -132,6 +166,9 @@ export const patientProfiles = pgTable(
     userId: text("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    preferredDoctorId: text("preferredDoctorId").references(() => users.id, {
+      onDelete: "set null",
+    }), // Preferred doctor selected during registration
     dob: timestamp("dob").notNull(),
     gender: genderEnum("gender").notNull(),
     bloodGroup: text("bloodGroup"),
@@ -202,6 +239,9 @@ export const appointments = pgTable("appointments", {
   patientId: text("patientId")
     .notNull()
     .references(() => patientProfiles.id, { onDelete: "cascade" }),
+  doctorId: text("doctorId").references(() => users.id, {
+    onDelete: "set null",
+  }), // Which doctor this appointment is for
   appointmentDate: timestamp("appointmentDate").notNull(),
   appointmentTime: text("appointmentTime").notNull(),
   status: appointmentStatusEnum("status").default("PENDING").notNull(),
@@ -210,6 +250,12 @@ export const appointments = pgTable("appointments", {
   paymentStatus: paymentStatusEnum("paymentStatus")
     .default("PENDING")
     .notNull(),
+  // Bill sent tracking
+  billSent: boolean("billSent").default(false).notNull(),
+  billSentAt: timestamp("billSentAt"),
+  // Prescription sent tracking
+  prescriptionSent: boolean("prescriptionSent").default(false).notNull(),
+  prescriptionSentAt: timestamp("prescriptionSentAt"),
   // Approval tracking
   approvedAt: timestamp("approvedAt"),
   approvedBy: text("approvedBy"), // userId who approved
@@ -279,6 +325,9 @@ export const doctorSchedule = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => createId()),
+    doctorId: text("doctorId").references(() => users.id, {
+      onDelete: "set null",
+    }), // Which doctor this schedule belongs to
     scheduleDate: timestamp("scheduleDate").notNull(), // Specific date for the schedule
     startTime: text("startTime").notNull(), // HH:mm format
     endTime: text("endTime").notNull(), // HH:mm format
@@ -294,7 +343,12 @@ export const doctorSchedule = pgTable(
       .$defaultFn(() => new Date())
       .notNull(),
   },
-  (table) => [uniqueIndex("doctor_schedule_date_idx").on(table.scheduleDate)],
+  (table) => [
+    uniqueIndex("doctor_schedule_doctor_date_idx").on(
+      table.doctorId,
+      table.scheduleDate,
+    ),
+  ],
 );
 
 export const payments = pgTable(
@@ -321,6 +375,28 @@ export const payments = pgTable(
   ],
 );
 
+export const doctorInvitations = pgTable(
+  "doctor_invitations",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    email: text("email").notNull(),
+    name: text("name"),
+    token: text("token").notNull().unique(),
+    status: invitationStatusEnum("status").default("PENDING").notNull(),
+    invitedBy: text("invitedBy")
+      .notNull()
+      .references(() => users.id),
+    expiresAt: timestamp("expiresAt").notNull(),
+    acceptedAt: timestamp("acceptedAt"),
+    isTestAccount: boolean("isTestAccount").default(false).notNull(),
+    createdAt: timestamp("createdAt")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [uniqueIndex("doctor_invitations_token_idx").on(table.token)],
+);
 
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -342,6 +418,13 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
 export const accountsRelations = relations(accounts, ({ one }) => ({
   user: one(users, {
     fields: [accounts.userId],
+    references: [users.id],
+  }),
+}));
+
+export const doctorProfilesRelations = relations(doctorProfiles, ({ one }) => ({
+  user: one(users, {
+    fields: [doctorProfiles.userId],
     references: [users.id],
   }),
 }));
@@ -384,6 +467,10 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
     fields: [appointments.patientId],
     references: [patientProfiles.id],
   }),
+  doctor: one(users, {
+    fields: [appointments.doctorId],
+    references: [users.id],
+  }),
   prescription: one(prescriptions, {
     fields: [appointments.id],
     references: [prescriptions.appointmentId],
@@ -419,10 +506,11 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
   }),
 }));
 
-
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+export type DoctorProfile = typeof doctorProfiles.$inferSelect;
+export type NewDoctorProfile = typeof doctorProfiles.$inferInsert;
 export type PatientProfile = typeof patientProfiles.$inferSelect;
 export type NewPatientProfile = typeof patientProfiles.$inferInsert;
 export type MedicalHistory = typeof medicalHistory.$inferSelect;
@@ -437,3 +525,5 @@ export type DoctorSchedule = typeof doctorSchedule.$inferSelect;
 export type NewDoctorSchedule = typeof doctorSchedule.$inferInsert;
 export type Payment = typeof payments.$inferSelect;
 export type NewPayment = typeof payments.$inferInsert;
+export type DoctorInvitation = typeof doctorInvitations.$inferSelect;
+export type NewDoctorInvitation = typeof doctorInvitations.$inferInsert;

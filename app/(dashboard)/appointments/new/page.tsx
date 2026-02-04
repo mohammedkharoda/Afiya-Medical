@@ -12,6 +12,7 @@ import {
   FileText,
   Stethoscope,
   CalendarIcon,
+  User,
 } from "lucide-react";
 import {
   Card,
@@ -39,12 +40,19 @@ interface UserData {
   role?: UserRole;
 }
 
+interface PreferredDoctor {
+  id: string;
+  name: string;
+  speciality: string;
+}
+
 function AppointmentBookingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, isPending } = useSession();
 
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [preferredDoctor, setPreferredDoctor] = useState<PreferredDoctor | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -57,7 +65,8 @@ function AppointmentBookingContent() {
   const [submitting, setSubmitting] = useState(false);
 
   // Check if form is ready to submit
-  const canSubmit = selectedDate && selectedTime && !submitting;
+  const canSubmit =
+    selectedDate && selectedTime && preferredDoctor && !submitting;
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -69,8 +78,10 @@ function AppointmentBookingContent() {
           const data = await response.json();
           console.log("Fetched user data:", data.user);
           setUserData(data.user);
+          if (data.preferredDoctor) {
+            setPreferredDoctor(data.preferredDoctor);
+          }
         } else if (response.status === 401) {
-          // Session expired - redirect to login with message
           toast.error("Your session has expired. Please log in again.");
           window.location.href = "/login?expired=true";
           return;
@@ -106,16 +117,27 @@ function AppointmentBookingContent() {
         console.log("No user data yet, skipping fetch");
         return;
       }
+      if (!preferredDoctor) {
+        console.log("No preferred doctor, skipping fetch");
+        setSlots([]);
+        setNoScheduleMessage("No doctor assigned. Please contact support.");
+        return;
+      }
 
       const dateStr = format(selectedDate, "yyyy-MM-dd");
-      console.log("Fetching slots for date:", dateStr);
+      console.log(
+        "Fetching slots for date:",
+        dateStr,
+        "doctor:",
+        preferredDoctor.id,
+      );
       setLoadingSlots(true);
       setSlots([]);
       setSelectedTime("");
       setNoScheduleMessage("");
       try {
         const response = await fetch(
-          `/api/appointments/available-slots?date=${encodeURIComponent(dateStr)}`,
+          `/api/appointments/available-slots?date=${encodeURIComponent(dateStr)}&doctorId=${encodeURIComponent(preferredDoctor.id)}`,
           { credentials: "include" },
         );
         const data = await response.json();
@@ -127,7 +149,6 @@ function AppointmentBookingContent() {
           return;
         }
 
-        // Check for message from API FIRST (when no schedule is set)
         if (data.message) {
           console.log("Setting noScheduleMessage:", data.message);
           setNoScheduleMessage(data.message);
@@ -146,13 +167,18 @@ function AppointmentBookingContent() {
     if (!loadingUser) {
       fetchSlots();
     }
-  }, [selectedDate, userData, loadingUser]);
+  }, [selectedDate, userData, loadingUser, preferredDoctor]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
     if (!selectedDate || !selectedTime) {
       toast.error("Please select a date and time");
+      return;
+    }
+
+    if (!preferredDoctor) {
+      toast.error("No doctor assigned. Please contact support.");
       return;
     }
 
@@ -166,6 +192,7 @@ function AppointmentBookingContent() {
           appointmentTime: selectedTime,
           symptoms,
           notes,
+          doctorId: preferredDoctor.id,
         }),
         credentials: "include",
       });
@@ -243,6 +270,33 @@ function AppointmentBookingContent() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Assigned Doctor Display */}
+            <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4">
+              <Label className="flex items-center gap-2 font-medium text-foreground mb-3">
+                <Stethoscope className="h-4 w-4 text-primary" />
+                Your Doctor
+              </Label>
+              {preferredDoctor ? (
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-lg">Dr. {preferredDoctor.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {preferredDoctor.speciality}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
+                  <p className="text-sm text-orange-800">
+                    No doctor assigned. Please contact support or update your profile.
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div className="grid gap-6 md:grid-cols-2">
               {/* Date Picker Section */}
               <div className="space-y-3">
@@ -390,7 +444,13 @@ function AppointmentBookingContent() {
 
 export default function AppointmentBookingPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          Loading...
+        </div>
+      }
+    >
       <AppointmentBookingContent />
     </Suspense>
   );

@@ -207,6 +207,15 @@ function LoginForm() {
                   </p>
                 )}
               </div>
+
+              <div className="text-right">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
             </CardContent>
 
             <CardFooter className="flex flex-col space-y-4 pt-2">

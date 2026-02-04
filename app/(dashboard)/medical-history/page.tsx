@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -39,12 +46,23 @@ interface MedicalHistoryData {
   updatedAt: string;
 }
 
+interface DoctorOption {
+  id: string;
+  name: string;
+  speciality?: string | null;
+  hasAvailability?: boolean;
+}
+
 export default function MedicalHistoryPage() {
   const [medicalHistory, setMedicalHistory] =
     useState<MedicalHistoryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [doctors, setDoctors] = useState<DoctorOption[]>([]);
+  const [preferredDoctorId, setPreferredDoctorId] = useState<string>("NONE");
+  const [initialPreferredDoctorId, setInitialPreferredDoctorId] =
+    useState<string>("NONE");
 
   // Form state
   const [conditions, setConditions] = useState<string[]>([]);
@@ -59,14 +77,28 @@ export default function MedicalHistoryPage() {
   const [newMedication, setNewMedication] = useState("");
   const [newSurgery, setNewSurgery] = useState("");
 
+  const testDoctorOption: DoctorOption = {
+    id: "TEST_DOCTOR",
+    name: "Test Doctor",
+    speciality: "Demo",
+  };
+
+  const doctorOptions = doctors.some((doctor) => doctor.id === "TEST_DOCTOR")
+    ? doctors
+    : [...doctors, testDoctorOption];
+
   useEffect(() => {
     const fetchMedicalHistory = async () => {
       try {
-        const response = await fetch("/api/medical-history", {
-          credentials: "include",
-        });
-        if (response.ok) {
-          const data = await response.json();
+        const [historyResponse, userResponse, doctorsResponse] =
+          await Promise.all([
+            fetch("/api/medical-history", { credentials: "include" }),
+            fetch("/api/user/me", { credentials: "include" }),
+            fetch("/api/doctors", { credentials: "include" }),
+          ]);
+
+        if (historyResponse.ok) {
+          const data = await historyResponse.json();
           if (data.medicalHistory) {
             setMedicalHistory(data.medicalHistory);
             // Initialize form state
@@ -76,6 +108,18 @@ export default function MedicalHistoryPage() {
             setSurgeries(data.medicalHistory.surgeries || []);
             setFamilyHistory(data.medicalHistory.familyHistory || "");
           }
+        }
+
+        if (userResponse.ok) {
+          const data = await userResponse.json();
+          const preferredId = data.preferredDoctor?.id || "NONE";
+          setPreferredDoctorId(preferredId);
+          setInitialPreferredDoctorId(preferredId);
+        }
+
+        if (doctorsResponse.ok) {
+          const data = await doctorsResponse.json();
+          setDoctors(data.doctors || []);
         }
       } catch (error) {
         console.error("Error fetching medical history:", error);
@@ -108,6 +152,31 @@ export default function MedicalHistoryPage() {
       if (response.ok) {
         const data = await response.json();
         setMedicalHistory(data.medicalHistory);
+
+        if (
+          preferredDoctorId !== initialPreferredDoctorId &&
+          preferredDoctorId !== "TEST_DOCTOR"
+        ) {
+          const updateResponse = await fetch("/api/patient/preferred-doctor", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              preferredDoctorId:
+                preferredDoctorId === "NONE" ? null : preferredDoctorId,
+            }),
+          });
+
+          if (!updateResponse.ok) {
+            const error = await updateResponse.json();
+            toast.error(error.error || "Failed to update doctor");
+          } else {
+            setInitialPreferredDoctorId(preferredDoctorId);
+          }
+        } else if (preferredDoctorId === "TEST_DOCTOR") {
+          setInitialPreferredDoctorId(preferredDoctorId);
+        }
+
         setIsEditing(false);
         toast.success("Medical history updated successfully");
       } else {
@@ -174,7 +243,7 @@ export default function MedicalHistoryPage() {
             </Button>
           </DialogTrigger>
           <DialogContent
-            className="max-w-2xl max-h-[90vh] overflow-y-auto"
+            className="max-w-2xl w-full max-h-[90vh] overflow-hidden"
             style={{ backgroundColor: "white" }}
           >
             <DialogHeader>
@@ -187,7 +256,35 @@ export default function MedicalHistoryPage() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-6 py-4">
+            <div className="space-y-6 py-4 max-h-[65vh] overflow-y-auto pr-2">
+              {/* Preferred Doctor */}
+              <div className="space-y-3">
+                <Label className="text-base font-medium text-foreground">
+                  Preferred Doctor
+                </Label>
+                <Select
+                  value={preferredDoctorId}
+                  onValueChange={setPreferredDoctorId}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a doctor" />
+                  </SelectTrigger>
+                  <SelectContent
+                    className="z-[10000]"
+                    position="popper"
+                    sideOffset={6}
+                  >
+                    <SelectItem value="NONE">No preference</SelectItem>
+                    {doctorOptions.map((doctor) => (
+                      <SelectItem key={doctor.id} value={doctor.id}>
+                        {doctor.name}
+                        {doctor.speciality ? ` • ${doctor.speciality}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Conditions */}
               <div className="space-y-3">
                 <Label className="text-base font-medium text-foreground">
@@ -436,7 +533,7 @@ export default function MedicalHistoryPage() {
               <Button
                 onClick={handleSave}
                 disabled={saving}
-                className="bg-primary hover:bg-primary/90"
+                className="bg-black text-white hover:bg-black/90"
               >
                 {saving ? "Saving..." : "Save Changes"}
               </Button>
@@ -470,6 +567,27 @@ export default function MedicalHistoryPage() {
         </Card>
       ) : (
         <div className="grid gap-4">
+          {/* Preferred Doctor */}
+          <Card className="border-border bg-white">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+                <Stethoscope className="h-5 w-5 text-primary" />
+                Preferred Doctor
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {preferredDoctorId !== "NONE" ? (
+                <p className="text-sm text-foreground">
+                  {doctors.find((doctor) => doctor.id === preferredDoctorId)
+                    ?.name || "Selected doctor"}
+                </p>
+              ) : (
+                <p className="text-muted-foreground text-sm italic">
+                  No preferred doctor selected
+                </p>
+              )}
+            </CardContent>
+          </Card>
           {/* Medical Conditions */}
           <Card className="border-border bg-white">
             <CardHeader className="pb-2">

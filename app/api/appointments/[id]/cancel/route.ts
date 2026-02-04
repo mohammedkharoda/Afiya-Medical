@@ -99,6 +99,7 @@ export async function POST(
         "CANCELLED",
         formattedDate,
         appointment.appointmentTime,
+        appointment.doctorId || undefined,
       ).catch((err) =>
         console.error("Error notifying patient of cancellation:", err),
       );
@@ -111,6 +112,7 @@ export async function POST(
         formattedDate,
         appointment.appointmentTime,
         reason.trim(),
+        appointment.doctorId || undefined,
       ).catch((err) =>
         console.error("Error notifying doctor of patient cancellation:", err),
       );

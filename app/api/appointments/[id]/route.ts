@@ -129,6 +129,11 @@ export async function PATCH(
         : format(existingAppointment.appointmentDate, "MMMM d, yyyy");
       const newTime = appointmentTime || existingAppointment.appointmentTime;
 
+      const doctorId =
+        existingAppointment.doctorId ||
+        existingAppointment.approvedBy ||
+        undefined;
+
       if (isRescheduled) {
         // Notify about reschedule
         notifyPatientAppointmentStatusChange(
@@ -136,6 +141,7 @@ export async function PATCH(
           "RESCHEDULED",
           newDate,
           newTime,
+          doctorId,
         ).catch((err) =>
           console.error("Error notifying patient of reschedule:", err),
         );
@@ -146,6 +152,7 @@ export async function PATCH(
           status,
           newDate,
           newTime,
+          doctorId,
         ).catch((err) =>
           console.error("Error notifying patient of status change:", err),
         );

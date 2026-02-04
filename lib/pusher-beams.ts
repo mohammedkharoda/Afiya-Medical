@@ -6,6 +6,13 @@ let initializationFailed = false;
 export const BEAMS_INSTANCE_ID =
   process.env.NEXT_PUBLIC_PUSHER_BEAMS_INSTANCE_ID || "";
 
+// Validate instance ID format (should be a UUID-like string)
+function isValidInstanceId(id: string): boolean {
+  if (!id || id.length < 32) return false;
+  // Basic UUID format check
+  return /^[a-f0-9-]{32,}$/i.test(id.replace(/-/g, ""));
+}
+
 export async function initializePusherBeams(): Promise<boolean> {
   if (typeof window === "undefined") return false;
 
@@ -14,8 +21,17 @@ export async function initializePusherBeams(): Promise<boolean> {
 
   // Check if instance ID is configured
   if (!BEAMS_INSTANCE_ID) {
-    console.warn(
-      "Pusher Beams instance ID not configured. Push notifications disabled.",
+    console.info(
+      "Push notifications: Instance ID not configured (set NEXT_PUBLIC_PUSHER_BEAMS_INSTANCE_ID)",
+    );
+    initializationFailed = true;
+    return false;
+  }
+
+  // Validate instance ID format before attempting connection
+  if (!isValidInstanceId(BEAMS_INSTANCE_ID)) {
+    console.info(
+      "Push notifications: Invalid instance ID format",
     );
     initializationFailed = true;
     return false;
@@ -23,8 +39,8 @@ export async function initializePusherBeams(): Promise<boolean> {
 
   // Check if push notifications are supported
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    console.warn(
-      "Push notifications not supported in this browser. Push notifications disabled.",
+    console.info(
+      "Push notifications: Not supported in this browser",
     );
     initializationFailed = true;
     return false;
@@ -32,7 +48,7 @@ export async function initializePusherBeams(): Promise<boolean> {
 
   // Check if PusherPushNotifications is available
   if (!(window as any).PusherPushNotifications) {
-    console.warn("Pusher Beams SDK not loaded");
+    console.info("Push notifications: SDK not loaded yet");
     return false;
   }
 
@@ -48,21 +64,35 @@ export async function initializePusherBeams(): Promise<boolean> {
     console.log("Pusher Beams initialized successfully");
     return true;
   } catch (error: any) {
-    // Handle specific error types gracefully
-    if (error?.name === "AbortError") {
-      console.warn(
-        "Push notification registration was aborted. This may happen if the browser doesn't support it or permissions were denied.",
+    // Handle specific error types gracefully - these are all expected in certain conditions
+    const errorMessage = error?.message?.toLowerCase() || "";
+    const errorName = error?.name || "";
+
+    if (errorName === "AbortError") {
+      // User cancelled or browser blocked
+      console.info(
+        "Push notifications: Registration aborted (browser may not support it or permissions denied)",
       );
     } else if (
-      error?.message?.includes("permission") ||
-      error?.name === "NotAllowedError"
+      errorMessage.includes("permission") ||
+      errorName === "NotAllowedError"
     ) {
-      console.warn(
-        "Push notification permission denied. Push notifications disabled.",
+      // Permission denied by user
+      console.info("Push notifications: Permission denied by user");
+    } else if (
+      errorMessage.includes("failed to fetch") ||
+      errorMessage.includes("network") ||
+      errorName === "TypeError"
+    ) {
+      // Network error - instance ID may be invalid or service unreachable
+      console.info(
+        "Push notifications: Service unavailable (check NEXT_PUBLIC_PUSHER_BEAMS_INSTANCE_ID)",
       );
     } else {
-      console.error("Failed to initialize Pusher Beams:", error);
+      // Unknown error - still just info level to avoid console spam
+      console.info("Push notifications: Initialization failed -", errorMessage || errorName);
     }
+
     initializationFailed = true;
     beamsClient = null;
     return false;

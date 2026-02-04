@@ -12,6 +12,7 @@ interface NewAppointmentAlertTemplateData {
   date: string;
   time: string;
   symptoms: string;
+  clinicAddress?: string;
 }
 
 /**
@@ -28,6 +29,7 @@ export const getNewAppointmentAlertTemplate = ({
   date,
   time,
   symptoms,
+  clinicAddress,
 }: NewAppointmentAlertTemplateData): string => {
   return getEmailWrapper(`
     ${getEmailHeader("New Appointment")}
@@ -49,7 +51,7 @@ export const getNewAppointmentAlertTemplate = ({
         <p style="margin: 8px 0 0 0; color: ${textSecondary};">${symptoms}</p>
       </div>
     </div>
-    ${getEmailFooter()}
+    ${getEmailFooter({ address: clinicAddress })}
   `);
 };
 

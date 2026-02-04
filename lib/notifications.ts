@@ -11,7 +11,7 @@ import {
   sendAppointmentCancelledByPatientEmail,
 } from "@/lib/email";
 import { CLINIC_NAME, NOTIFICATION_MESSAGES } from "@/lib/constants";
-import { getDoctor } from "@/lib/doctor";
+import { getDoctor, getDoctorById } from "@/lib/doctor";
 import {
   sendAppointmentConfirmationPush,
   sendAppointmentStatusPush,
@@ -41,11 +41,25 @@ export async function notifyPatientAppointmentBooked(
   userId: string,
   date: string,
   time: string,
+  doctorId?: string,
 ) {
   const patientName = await getUserName(userId);
   const patientEmail = await getUserEmail(userId);
-  const doctor = await getDoctor();
-  const doctorName = doctor?.name || "Doctor";
+
+  // Get specific doctor if doctorId provided, otherwise fallback to first doctor
+  let doctorName = "Doctor";
+  let clinicAddress: string | null = null;
+  if (doctorId) {
+    const doctor = await getDoctorById(doctorId);
+    if (doctor) {
+      doctorName = doctor.name;
+      clinicAddress = doctor.clinicAddress || null;
+    }
+  } else {
+    const doctor = await getDoctor();
+    doctorName = doctor?.name || "Doctor";
+    clinicAddress = doctor?.clinicAddress || null;
+  }
 
   // Trigger real-time notification via Pusher
   await triggerNotification(userId, {
@@ -65,6 +79,7 @@ export async function notifyPatientAppointmentBooked(
       time,
       doctorName,
       CLINIC_NAME,
+      clinicAddress || undefined,
     );
   }
 
@@ -87,10 +102,13 @@ export async function notifyDoctorNewAppointment(
   date: string,
   time: string,
   symptoms: string,
+  doctorId?: string,
 ) {
   const patientName = await getUserName(patientUserId);
   const patientPhone = await getUserPhone(patientUserId);
-  const doctor = await getDoctor();
+
+  // Get specific doctor if doctorId provided, otherwise fallback to first doctor
+  const doctor = doctorId ? await getDoctorById(doctorId) : await getDoctor();
 
   if (doctor) {
     // Trigger real-time notification via Pusher
@@ -115,6 +133,7 @@ export async function notifyDoctorNewAppointment(
       time,
       symptoms,
       CLINIC_NAME,
+      doctor.clinicAddress || undefined,
     );
   }
 
@@ -128,9 +147,19 @@ export async function notifyPatientAppointmentStatusChange(
   status: string,
   date: string,
   time: string,
+  doctorId?: string,
 ) {
   const patientName = await getUserName(userId);
   const patientEmail = await getUserEmail(userId);
+  let clinicAddress: string | null = null;
+
+  if (doctorId) {
+    const doctor = await getDoctorById(doctorId);
+    clinicAddress = doctor?.clinicAddress || null;
+  } else {
+    const doctor = await getDoctor();
+    clinicAddress = doctor?.clinicAddress || null;
+  }
 
   let title = "Appointment Update";
   let message = "";
@@ -170,6 +199,7 @@ export async function notifyPatientAppointmentStatusChange(
       date,
       time,
       CLINIC_NAME,
+      clinicAddress || undefined,
     );
   }
 
@@ -211,10 +241,13 @@ export async function notifyDoctorApprovalNeeded(
   date: string,
   time: string,
   symptoms: string,
+  doctorId?: string,
 ) {
   const patientName = await getUserName(patientUserId);
   const patientPhone = await getUserPhone(patientUserId);
-  const doctor = await getDoctor();
+
+  // Get specific doctor if doctorId provided, otherwise fallback to first doctor
+  const doctor = doctorId ? await getDoctorById(doctorId) : await getDoctor();
 
   if (doctor) {
     // Trigger real-time notification via Pusher
@@ -239,6 +272,7 @@ export async function notifyDoctorApprovalNeeded(
       time,
       symptoms,
       CLINIC_NAME,
+      doctor.clinicAddress || undefined,
     );
   }
 }
@@ -248,11 +282,25 @@ export async function notifyPatientAppointmentApproved(
   userId: string,
   date: string,
   time: string,
+  doctorId?: string,
 ) {
   const patientName = await getUserName(userId);
   const patientEmail = await getUserEmail(userId);
-  const doctor = await getDoctor();
-  const doctorName = doctor?.name || "Doctor";
+
+  // Get specific doctor if doctorId provided, otherwise fallback to first doctor
+  let doctorName = "Doctor";
+  let clinicAddress: string | null = null;
+  if (doctorId) {
+    const doctor = await getDoctorById(doctorId);
+    if (doctor) {
+      doctorName = doctor.name;
+      clinicAddress = doctor.clinicAddress || null;
+    }
+  } else {
+    const doctor = await getDoctor();
+    doctorName = doctor?.name || "Doctor";
+    clinicAddress = doctor?.clinicAddress || null;
+  }
 
   // Trigger real-time notification via Pusher
   await triggerNotification(userId, {
@@ -272,6 +320,7 @@ export async function notifyPatientAppointmentApproved(
       time,
       doctorName,
       CLINIC_NAME,
+      clinicAddress || undefined,
     );
   }
 
@@ -285,9 +334,19 @@ export async function notifyPatientAppointmentDeclined(
   date: string,
   time: string,
   reason: string,
+  doctorId?: string,
 ) {
   const patientName = await getUserName(userId);
   const patientEmail = await getUserEmail(userId);
+  let clinicAddress: string | null = null;
+
+  if (doctorId) {
+    const doctor = await getDoctorById(doctorId);
+    clinicAddress = doctor?.clinicAddress || null;
+  } else {
+    const doctor = await getDoctor();
+    clinicAddress = doctor?.clinicAddress || null;
+  }
 
   // Trigger real-time notification via Pusher
   await triggerNotification(userId, {
@@ -307,6 +366,7 @@ export async function notifyPatientAppointmentDeclined(
       time,
       reason,
       CLINIC_NAME,
+      clinicAddress || undefined,
     );
   }
 
@@ -320,10 +380,13 @@ export async function notifyDoctorAppointmentCancelledByPatient(
   date: string,
   time: string,
   reason: string,
+  doctorId?: string,
 ) {
   const patientName = await getUserName(patientUserId);
   const patientPhone = await getUserPhone(patientUserId);
-  const doctor = await getDoctor();
+
+  // Get specific doctor if doctorId provided, otherwise fallback to first doctor
+  const doctor = doctorId ? await getDoctorById(doctorId) : await getDoctor();
 
   if (doctor) {
     // Trigger real-time notification via Pusher
@@ -347,6 +410,7 @@ export async function notifyDoctorAppointmentCancelledByPatient(
       date,
       time,
       reason,
+      doctor.clinicAddress || undefined,
     );
   }
 }

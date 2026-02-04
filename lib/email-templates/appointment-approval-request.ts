@@ -13,6 +13,7 @@ interface AppointmentApprovalRequestTemplateData {
   time: string;
   symptoms: string;
   clinicName: string;
+  clinicAddress?: string;
 }
 
 /**
@@ -27,6 +28,7 @@ export const getAppointmentApprovalRequestTemplate = ({
   time,
   symptoms,
   clinicName,
+  clinicAddress,
 }: AppointmentApprovalRequestTemplateData): string => {
   return getEmailWrapper(`
     ${getEmailHeader("Action Required: New Appointment")}
@@ -54,7 +56,7 @@ export const getAppointmentApprovalRequestTemplate = ({
         <p style="margin: 8px 0 0 0; color: #991b1b;">Please log in to your dashboard to approve or decline this appointment request.</p>
       </div>
     </div>
-    ${getEmailFooter()}
+    ${getEmailFooter({ address: clinicAddress })}
   `);
 };
 

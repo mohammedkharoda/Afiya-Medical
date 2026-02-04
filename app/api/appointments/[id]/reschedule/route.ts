@@ -126,6 +126,7 @@ export async function POST(
         "RESCHEDULED",
         formattedDate,
         newTime,
+        appointment.doctorId || undefined,
       ).catch((err) =>
         console.error("Error notifying patient of reschedule:", err),
       );

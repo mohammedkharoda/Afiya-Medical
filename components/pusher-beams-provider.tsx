@@ -16,6 +16,12 @@ interface PusherBeamsProviderProps {
   userRole?: string;
 }
 
+// Validate instance ID format (should be a UUID-like string)
+function isValidInstanceId(id: string): boolean {
+  if (!id || id.length < 32) return false;
+  return /^[a-f0-9-]{32,}$/i.test(id.replace(/-/g, ""));
+}
+
 export function PusherBeamsProvider({
   children,
   userId,
@@ -28,6 +34,9 @@ export function PusherBeamsProvider({
   const setPusherBeamsReady = useLoadingStore(
     (state) => state.setPusherBeamsReady
   );
+
+  // Check if instance ID is valid
+  const isInstanceIdValid = isValidInstanceId(BEAMS_INSTANCE_ID);
 
   useEffect(() => {
     if (!sdkLoaded || !userId || initAttempted.current) return;
@@ -49,17 +58,16 @@ export function PusherBeamsProvider({
             await subscribeToInterest("doctor-alerts");
           }
         }
-      } catch (error) {
+      } catch {
         // Silently handle errors - push notifications are optional
-        console.warn("Push notification setup failed:", error);
       }
     };
 
     initBeams();
   }, [sdkLoaded, userId, userRole]);
 
-  // Don't load the SDK if instance ID is not configured
-  if (!BEAMS_INSTANCE_ID) {
+  // Don't load the SDK if instance ID is not configured or invalid
+  if (!BEAMS_INSTANCE_ID || !isInstanceIdValid) {
     // Mark as ready even without SDK (graceful degradation)
     useEffect(() => {
       setPusherBeamsReady(true);

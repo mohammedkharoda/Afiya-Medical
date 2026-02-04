@@ -28,7 +28,8 @@
       "Bash(cmdkey /delete:git:https://github.com)",
       "Bash(cmdkey /delete:*)",
       "Bash(ssh:*)",
-      "Bash(del nul)"
+      "Bash(del nul)",
+      "Bash(npx tsx:*)"
     ]
   }
 }

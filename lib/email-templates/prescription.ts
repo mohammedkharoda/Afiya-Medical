@@ -31,6 +31,7 @@ interface PrescriptionTemplateData {
   followUpDate?: string;
   attachmentUrl?: string;
   prescriptionDate: string;
+  clinicAddress?: string;
 }
 
 /**
@@ -66,6 +67,7 @@ export const getPrescriptionTemplate = ({
   followUpDate,
   attachmentUrl,
   prescriptionDate,
+  clinicAddress,
 }: PrescriptionTemplateData): string => {
   const medicationsList = getMedicationsList(medications);
 
@@ -136,7 +138,7 @@ export const getPrescriptionTemplate = ({
         </p>
       </div>
     </div>
-    ${getEmailFooter()}
+    ${getEmailFooter({ address: clinicAddress })}
   `);
 };
 
