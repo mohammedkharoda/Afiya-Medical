@@ -159,7 +159,7 @@ export default function DoctorAppointmentsSummaryPage() {
             type="month"
             value={month}
             onChange={(event) => setMonth(event.target.value)}
-            className="w-[160px]"
+            className="w-40"
           />
           <Button
             variant="outline"

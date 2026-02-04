@@ -85,9 +85,9 @@ export function CompleteAppointmentDialog({
       setPaymentMethod("CASH");
       setIsPaid(false);
       setNotes("");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error completing appointment:", error);
-      toast.error(error.message || "Failed to complete appointment");
+      toast.error(error instanceof Error ? error.message : "Failed to complete appointment");
     } finally {
       setLoading(false);
     }
@@ -95,7 +95,7 @@ export function CompleteAppointmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-125">
         <DialogHeader>
           <DialogTitle>Complete Appointment</DialogTitle>
           <DialogDescription>

@@ -49,10 +49,11 @@ interface PreferredDoctor {
 function AppointmentBookingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: session, isPending } = useSession();
+  const { isPending } = useSession();
 
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [preferredDoctor, setPreferredDoctor] = useState<PreferredDoctor | null>(null);
+  const [preferredDoctor, setPreferredDoctor] =
+    useState<PreferredDoctor | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -282,7 +283,9 @@ function AppointmentBookingContent() {
                     <User className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <p className="font-semibold text-lg">Dr. {preferredDoctor.name}</p>
+                    <p className="font-semibold text-lg">
+                      Dr. {preferredDoctor.name}
+                    </p>
                     <p className="text-sm text-muted-foreground">
                       {preferredDoctor.speciality}
                     </p>
@@ -291,7 +294,8 @@ function AppointmentBookingContent() {
               ) : (
                 <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
                   <p className="text-sm text-orange-800">
-                    No doctor assigned. Please contact support or update your profile.
+                    No doctor assigned. Please contact support or update your
+                    profile.
                   </p>
                 </div>
               )}
@@ -346,7 +350,7 @@ function AppointmentBookingContent() {
                     </span>
                   )}
                 </Label>
-                <div className="rounded-lg border border-border p-4 min-h-[200px]">
+                <div className="rounded-lg border border-border p-4 min-h-50">
                   {loadingSlots ? (
                     <div className="flex items-center gap-3 text-muted-foreground">
                       <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />

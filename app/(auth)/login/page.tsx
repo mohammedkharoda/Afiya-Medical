@@ -119,7 +119,7 @@ function LoginForm() {
         {/* Session Expired Warning */}
         {sessionExpired && (
           <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-4 flex items-start gap-3 relative">
-            <AlertTriangle className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="font-medium text-orange-800">Session Expired</p>
               <p className="text-sm text-orange-700">
@@ -128,7 +128,7 @@ function LoginForm() {
             </div>
             <button
               onClick={() => setSessionExpired(false)}
-              className="text-orange-600 hover:text-orange-800 flex-shrink-0"
+              className="text-orange-600 hover:text-orange-800 shrink-0"
               aria-label="Dismiss"
             >
               ✕
@@ -192,13 +192,11 @@ function LoginForm() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     tabIndex={-1}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                   >
-                    {showPassword ? (
-                      <EyeOff size={18} />
-                    ) : (
-                      <Eye size={18} />
-                    )}
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
                 {errors.password && (
@@ -247,7 +245,13 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          Loading...
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

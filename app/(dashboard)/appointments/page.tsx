@@ -13,13 +13,11 @@ import {
   FileText,
   Phone,
   CalendarDays,
-  IndianRupee,
   Banknote,
   Copy,
   Check,
   Plus,
   Trash,
-  Upload,
   FileIcon,
   Pill,
   Eye,
@@ -232,19 +230,11 @@ export default function AppointmentsPage() {
 
   // Real-time appointment updates via Pusher
   usePusherAppointments(
-    useCallback(
-      (updatedAppointment: {
-        id: string;
-        status: string;
-        patientId: string;
-        isNew?: boolean;
-      }) => {
-        // For any appointment change, refetch to get complete data
-        // This handles: new appointments (for doctor), status changes, rescheduling
-        fetchAppointments();
-      },
-      [fetchAppointments],
-    ),
+    useCallback(() => {
+      // For any appointment change, refetch to get complete data
+      // This handles: new appointments (for doctor), status changes, rescheduling
+      fetchAppointments();
+    }, [fetchAppointments]),
   );
 
   // Fetch user data on mount
@@ -1346,7 +1336,7 @@ export default function AppointmentsPage() {
                   </PopoverTrigger>
                   <PopoverContent
                     align="start"
-                    className="w-auto p-0 z-[10002]"
+                    className="w-auto p-0 z-10002"
                     sideOffset={6}
                   >
                     <DatePicker
