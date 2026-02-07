@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { AppFooter } from "@/components/app-footer";
 const mluvka = localFont({
   src: [
     {
@@ -57,7 +58,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${mluvka.variable} antialiased`}>
-        {children}
+        <div className="flex min-h-screen flex-col">
+          <div className="flex-1">{children}</div>
+          <AppFooter />
+        </div>
         <Toaster position="top-right" richColors closeButton />
         <SpeedInsights />
       </body>

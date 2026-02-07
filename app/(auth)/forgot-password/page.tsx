@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 import {
   Card,
   CardContent,
@@ -33,6 +34,9 @@ function ForgotPasswordContent() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [resendCaptchaToken, setResendCaptchaToken] = useState("");
+  const captchaSiteKey = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || "";
 
   const ref0 = useRef<HTMLInputElement>(null);
   const ref1 = useRef<HTMLInputElement>(null);
@@ -58,12 +62,16 @@ function ForgotPasswordContent() {
   // Step 1: Request OTP
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!captchaToken) {
+      toast.error("Please complete the captcha to continue");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: email.trim(), captchaToken }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -81,6 +89,7 @@ function ForgotPasswordContent() {
       );
       setStep("otp");
       startCooldown(60);
+      setCaptchaToken("");
     } catch {
       toast.error("An unexpected error occurred");
     } finally {
@@ -115,12 +124,19 @@ function ForgotPasswordContent() {
   // Resend OTP
   const handleResend = async () => {
     if (cooldown > 0) return;
+    if (!resendCaptchaToken) {
+      toast.error("Please complete the captcha to resend");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({
+          email: email.trim(),
+          captchaToken: resendCaptchaToken,
+        }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -130,6 +146,7 @@ function ForgotPasswordContent() {
       toast.success("A new code has been sent");
       startCooldown(60);
       setCode("");
+      setResendCaptchaToken("");
     } catch {
       toast.error("An unexpected error occurred");
     } finally {
@@ -186,13 +203,27 @@ function ForgotPasswordContent() {
                     required
                   />
                 </div>
+                <div className="rounded-lg border border-border bg-muted/30 p-3">
+                  {captchaSiteKey ? (
+                    <HCaptcha
+                      sitekey={captchaSiteKey}
+                      onVerify={(token) => setCaptchaToken(token)}
+                      onExpire={() => setCaptchaToken("")}
+                    />
+                  ) : (
+                    <div className="text-xs text-destructive">
+                      Captcha is not configured. Set
+                      NEXT_PUBLIC_HCAPTCHA_SITE_KEY to enable.
+                    </div>
+                  )}
+                </div>
               </CardContent>
               <CardFooter className="flex flex-col space-y-4 pt-2">
                 <Button
                   type="submit"
                   size="lg"
                   className="w-full h-12 text-base font-semibold"
-                  disabled={loading || !email.trim()}
+                  disabled={loading || !email.trim() || !captchaSiteKey}
                   variant="outline"
                 >
                   {loading ? (
@@ -295,6 +326,21 @@ function ForgotPasswordContent() {
                     <RefreshCw size={16} className="mr-2" />
                     {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
                   </Button>
+                </div>
+
+                <div className="rounded-lg border border-border bg-muted/30 p-3">
+                  {captchaSiteKey ? (
+                    <HCaptcha
+                      sitekey={captchaSiteKey}
+                      onVerify={(token) => setResendCaptchaToken(token)}
+                      onExpire={() => setResendCaptchaToken("")}
+                    />
+                  ) : (
+                    <div className="text-xs text-destructive">
+                      Captcha is not configured. Set
+                      NEXT_PUBLIC_HCAPTCHA_SITE_KEY to enable.
+                    </div>
+                  )}
                 </div>
 
                 <Button

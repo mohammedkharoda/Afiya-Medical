@@ -7,10 +7,22 @@ import { registerSchema } from "@/lib/validations/auth";
 import { sendOtpEmail } from "@/lib/email";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { createId } from "@paralleldrive/cuid2";
+import { verifyHCaptcha } from "@/lib/hcaptcha";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    const captchaToken = body?.captchaToken;
+    const remoteIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || undefined;
+
+    const captchaCheck = await verifyHCaptcha(captchaToken, remoteIp);
+    if (!captchaCheck.success) {
+      return NextResponse.json(
+        { error: captchaCheck.error || "Captcha verification failed" },
+        { status: 400 },
+      );
+    }
 
     // Validate input
     const validatedData = registerSchema.parse(body);

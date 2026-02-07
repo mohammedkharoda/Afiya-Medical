@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.38.0",
+    "@hcaptcha/react-hcaptcha": "1.12.1",
     "@hookform/resolvers": "^5.2.2",
     "@neondatabase/serverless": "^1.0.2",
     "@paralleldrive/cuid2": "^3.0.6",
@@ -65,9 +66,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/bcryptjs": "^3.0.0",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/minimatch": "^6.0.0",
     "@types/multer": "^2.0.0",
     "@types/node": "^20",
     "@types/react": "^19",

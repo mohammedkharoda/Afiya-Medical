@@ -3,7 +3,7 @@ import PasswordValidator from "password-validator";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 // List of disposable/temporary email domains to block
-const DISPOSABLE_EMAIL_DOMAINS = [
+const BASE_DISPOSABLE_EMAIL_DOMAINS = [
   "tempmail.com",
   "temp-mail.org",
   "guerrillamail.com",
@@ -65,6 +65,24 @@ const DISPOSABLE_EMAIL_DOMAINS = [
   "tempemail.net",
 ];
 
+const DISPOSABLE_DOMAIN_SET = new Set(
+  BASE_DISPOSABLE_EMAIL_DOMAINS.map((domain) => domain.toLowerCase()),
+);
+
+const isDisposableDomain = (domain?: string) => {
+  if (!domain) return false;
+  const normalized = domain.toLowerCase();
+  if (DISPOSABLE_DOMAIN_SET.has(normalized)) return true;
+
+  const parts = normalized.split(".");
+  for (let i = 1; i < parts.length; i += 1) {
+    const candidate = parts.slice(i).join(".");
+    if (DISPOSABLE_DOMAIN_SET.has(candidate)) return true;
+  }
+
+  return false;
+};
+
 /**
  * Validates email to ensure:
  * 1. No "+" sign (blocks email aliasing like user+tag@gmail.com)
@@ -86,7 +104,7 @@ export function validateEmail(email: string): {
 
   // Extract domain and check against disposable domains
   const domain = email.split("@")[1]?.toLowerCase();
-  if (domain && DISPOSABLE_EMAIL_DOMAINS.includes(domain)) {
+  if (domain && isDisposableDomain(domain)) {
     return {
       valid: false,
       error: "Temporary or disposable email addresses are not allowed",
@@ -112,7 +130,7 @@ export const safeEmailSchema = z
   .refine(
     (email) => {
       const domain = email.split("@")[1]?.toLowerCase();
-      return !domain || !DISPOSABLE_EMAIL_DOMAINS.includes(domain);
+      return !domain || !isDisposableDomain(domain);
     },
     { message: "Temporary or disposable email addresses are not allowed" },
   );

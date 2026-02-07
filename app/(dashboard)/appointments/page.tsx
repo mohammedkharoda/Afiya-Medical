@@ -25,6 +25,7 @@ import {
   RefreshCw,
   Send,
   Download,
+  X,
 } from "lucide-react";
 import {
   Card,
@@ -37,6 +38,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -2139,159 +2141,189 @@ export default function AppointmentsPage() {
         }}
       >
         <DialogContent
-          style={{ backgroundColor: "white" }}
-          className="max-w-3xl max-h-[90vh] overflow-y-auto"
+          showCloseButton={false}
+          className="max-w-4xl max-h-[90vh] overflow-hidden p-0 rounded-2xl border-border/80 shadow-2xl"
         >
-          <DialogHeader>
-            <DialogTitle>Prescription & Bill Details</DialogTitle>
-            <DialogDescription>
-              View your diagnosis, medications, and billing information.
-            </DialogDescription>
-          </DialogHeader>
+          <div className="border-b border-border/80 bg-gradient-to-r from-emerald-50 via-white to-teal-50 p-6">
+            <DialogHeader className="space-y-2">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <DialogTitle className="text-xl">
+                    Prescription & Bill Details
+                  </DialogTitle>
+                  <DialogDescription className="text-sm">
+                    View your diagnosis, medications, and billing information.
+                  </DialogDescription>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                    Summary
+                  </span>
+                  <DialogClose
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-emerald-200 bg-white text-emerald-700 transition hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                    aria-label="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </DialogClose>
+                </div>
+              </div>
+            </DialogHeader>
+          </div>
 
-          {selectedAppointment && (
-            <div className="space-y-6 py-4">
-              {/* Bill Section */}
-              {selectedAppointment.payment &&
-                selectedAppointment.payment.status === "PAID" && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
-                    <div>
-                      <h4 className="font-semibold text-green-800 flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4" /> Paid Bill
-                      </h4>
-                      <p className="text-sm text-green-700">
-                        Amount Paid:{" "}
-                        <span className="font-bold text-lg">
-                          ₹{selectedAppointment.payment.amount}
-                        </span>
-                      </p>
+          <div className="max-h-[70vh] overflow-y-auto px-6 pb-6 pt-4">
+            {selectedAppointment && (
+              <div className="space-y-6">
+                {/* Bill Section */}
+                {selectedAppointment.payment &&
+                  selectedAppointment.payment.status === "PAID" && (
+                    <div className="rounded-xl border border-green-200 bg-gradient-to-br from-green-50 via-white to-emerald-50 p-4 sm:p-5">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <h4 className="font-semibold text-green-800 flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4" /> Paid Bill
+                          </h4>
+                          <p className="text-sm text-green-700">
+                            Amount Paid:{" "}
+                            <span className="font-bold text-lg">
+                              ₹{selectedAppointment.payment.amount}
+                            </span>
+                          </p>
+                        </div>
+                        <Badge className="bg-green-200 text-green-800 hover:bg-green-200">
+                          PAID
+                        </Badge>
+                      </div>
                     </div>
-                    <Badge className="bg-green-200 text-green-800 hover:bg-green-200">
-                      PAID
-                    </Badge>
-                  </div>
-                )}
+                  )}
 
-              {/* Diagnosis */}
-              {selectedAppointment.prescription ? (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-muted-foreground uppercase">
-                        Diagnosis
-                      </label>
-                      <p className="font-medium text-lg">
-                        {selectedAppointment.prescription.diagnosis}
-                      </p>
-                    </div>
-                    {selectedAppointment.prescription.notes && (
-                      <div className="space-y-1">
+                {/* Diagnosis */}
+                {selectedAppointment.prescription ? (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="rounded-xl border border-border/70 bg-white p-4 shadow-sm">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase">
+                          Diagnosis
+                        </label>
+                        <p className="mt-1 font-medium text-lg">
+                          {selectedAppointment.prescription.diagnosis}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-border/70 bg-white p-4 shadow-sm">
                         <label className="text-xs font-semibold text-muted-foreground uppercase">
                           Clinical Notes
                         </label>
-                        <p className="text-sm text-foreground">
-                          {selectedAppointment.prescription.notes}
+                        <p className="mt-1 text-sm text-foreground">
+                          {selectedAppointment.prescription.notes || "-"}
                         </p>
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  <div className="border-t"></div>
-
-                  {/* Medications */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium flex items-center gap-2">
-                      <Pill className="h-4 w-4 text-primary" /> Medications
-                    </h4>
-                    {selectedAppointment.prescription.medications.length > 0 ? (
-                      <div className="rounded-lg border overflow-hidden">
-                        <table className="w-full text-sm">
-                          <thead className="bg-muted/50">
-                            <tr>
-                              <th className="py-2 px-3 text-left font-medium">
-                                Medicine
-                              </th>
-                              <th className="py-2 px-3 text-left font-medium">
-                                Dosage
-                              </th>
-                              <th className="py-2 px-3 text-left font-medium">
-                                Freq
-                              </th>
-                              <th className="py-2 px-3 text-left font-medium">
-                                Duration
-                              </th>
-                              <th className="py-2 px-3 text-left font-medium">
-                                Instructions
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y">
-                            {selectedAppointment.prescription.medications.map(
-                              (med, idx) => (
-                                <tr key={idx} className="bg-white">
-                                  <td className="py-2 px-3 font-medium">
-                                    {med.medicineName}
-                                  </td>
-                                  <td className="py-2 px-3">{med.dosage}</td>
-                                  <td className="py-2 px-3">{med.frequency}</td>
-                                  <td className="py-2 px-3">{med.duration}</td>
-                                  <td className="py-2 px-3 text-muted-foreground">
-                                    {med.instructions || "-"}
-                                  </td>
+                    {/* Medications */}
+                    <div className="space-y-3">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <Pill className="h-4 w-4 text-primary" /> Medications
+                      </h4>
+                      {selectedAppointment.prescription.medications.length >
+                      0 ? (
+                        <div className="rounded-xl border border-border/70 overflow-hidden">
+                          <div className="overflow-x-auto">
+                            <table className="min-w-[720px] w-full text-sm">
+                              <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
+                                <tr>
+                                  <th className="py-3 px-3 text-left font-medium w-48">
+                                    Medicine
+                                  </th>
+                                  <th className="py-3 px-3 text-left font-medium w-28">
+                                    Dosage
+                                  </th>
+                                  <th className="py-3 px-3 text-left font-medium w-32">
+                                    Freq
+                                  </th>
+                                  <th className="py-3 px-3 text-left font-medium w-28">
+                                    Duration
+                                  </th>
+                                  <th className="py-3 px-3 text-left font-medium">
+                                    Instructions
+                                  </th>
                                 </tr>
-                              ),
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">
-                        No medications prescribed.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-6 text-muted-foreground bg-muted/20 rounded-lg">
-                  <p>Prescription details not available.</p>
-                </div>
-              )}
-
-              {/* Attachments */}
-              {selectedAppointment.patient?.medicalDocuments &&
-                selectedAppointment.patient.medicalDocuments.filter(
-                  (d) => d.documentType === "PRESCRIPTION",
-                ).length > 0 && (
-                  <div className="space-y-3 pt-4 border-t">
-                    <h4 className="font-medium flex items-center gap-2">
-                      <FileIcon className="h-4 w-4 text-primary" /> prescription
-                      Documents
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedAppointment.patient.medicalDocuments
-                        .filter((d) => d.documentType === "PRESCRIPTION")
-                        // Simple generic filter, ideally would match date
-                        .map((doc) => (
-                          <a
-                            key={doc.id}
-                            href={doc.fileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 p-2 border rounded-lg hover:bg-muted transition-colors text-sm text-blue-600 hover:underline"
-                          >
-                            <FileIcon className="h-4 w-4" />
-                            {doc.fileName}
-                          </a>
-                        ))}
+                              </thead>
+                              <tbody className="divide-y divide-border">
+                                {selectedAppointment.prescription.medications.map(
+                                  (med, idx) => (
+                                    <tr key={idx} className="bg-white">
+                                      <td className="py-3 px-3 font-medium align-top">
+                                        {med.medicineName}
+                                      </td>
+                                      <td className="py-3 px-3 align-top">
+                                        {med.dosage}
+                                      </td>
+                                      <td className="py-3 px-3 align-top">
+                                        {med.frequency}
+                                      </td>
+                                      <td className="py-3 px-3 align-top">
+                                        {med.duration}
+                                      </td>
+                                      <td className="py-3 px-3 text-muted-foreground align-top">
+                                        {med.instructions || "-"}
+                                      </td>
+                                    </tr>
+                                  ),
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">
+                          No medications prescribed.
+                        </p>
+                      )}
                     </div>
                   </div>
+                ) : (
+                  <div className="text-center py-6 text-muted-foreground bg-muted/20 rounded-lg">
+                    <p>Prescription details not available.</p>
+                  </div>
                 )}
-            </div>
-          )}
 
-          <DialogFooter>
-            <Button onClick={() => setDialogType(null)}>Close</Button>
-          </DialogFooter>
+                {/* Attachments */}
+                {selectedAppointment.patient?.medicalDocuments &&
+                  selectedAppointment.patient.medicalDocuments.filter(
+                    (d) => d.documentType === "PRESCRIPTION",
+                  ).length > 0 && (
+                    <div className="space-y-3 pt-2">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <FileIcon className="h-4 w-4 text-primary" />{" "}
+                        Prescription Documents
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedAppointment.patient.medicalDocuments
+                          .filter((d) => d.documentType === "PRESCRIPTION")
+                          // Simple generic filter, ideally would match date
+                          .map((doc) => (
+                            <a
+                              key={doc.id}
+                              href={doc.fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 rounded-lg border border-border/70 bg-white px-3 py-2 text-sm text-blue-600 transition-colors hover:bg-muted hover:underline"
+                            >
+                              <FileIcon className="h-4 w-4" />
+                              {doc.fileName}
+                            </a>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+              </div>
+            )}
+
+            <DialogFooter className="mt-6">
+              <Button onClick={() => setDialogType(null)} className="min-w-28">
+                Close
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

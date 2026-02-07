@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import Image from "next/image";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -80,6 +81,8 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [dobDate, setDobDate] = useState<Date | undefined>(undefined);
   const [dobOpen, setDobOpen] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const captchaSiteKey = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY || "";
 
   // Doctor selection state
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -233,6 +236,11 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!captchaToken) {
+      toast.error("Please complete the captcha to continue");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -244,6 +252,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           ...data,
           preferredDoctorId: selectedDoctor,
+          captchaToken,
         }),
         credentials: "include",
       });
@@ -882,11 +891,25 @@ export default function RegisterPage() {
             </CardContent>
 
             <CardFooter className="flex flex-col space-y-4 pt-2">
+              <div className="w-full rounded-lg border border-border bg-muted/30 p-3">
+                {captchaSiteKey ? (
+                  <HCaptcha
+                    sitekey={captchaSiteKey}
+                    onVerify={(token) => setCaptchaToken(token)}
+                    onExpire={() => setCaptchaToken("")}
+                  />
+                ) : (
+                  <div className="text-xs text-destructive">
+                    Captcha is not configured. Set
+                    NEXT_PUBLIC_HCAPTCHA_SITE_KEY to enable.
+                  </div>
+                )}
+              </div>
               <Button
                 type="submit"
                 size="lg"
                 className="w-full h-12 text-base font-semibold"
-                disabled={loading || !selectedDoctor}
+                disabled={loading || !selectedDoctor || !captchaSiteKey}
               >
                 {loading ? "Creating account..." : "Create account"}
               </Button>
