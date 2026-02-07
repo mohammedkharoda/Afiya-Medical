@@ -5,7 +5,17 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes (no session required) - "/" is NOT public, it redirects based on auth
-  const publicRoutes = ["/login", "/register", "/register/doctor", "/verify-email", "/verify-otp", "/admin/login", "/forgot-password", "/reset-password"];
+  // Deploy version
+  const publicRoutes = [
+    "/login",
+    "/register",
+    "/register/doctor",
+    "/verify-email",
+    "/verify-otp",
+    "/admin/login",
+    "/forgot-password",
+    "/reset-password",
+  ];
   const isPublicRoute = publicRoutes.some(
     (route) =>
       pathname === route ||
