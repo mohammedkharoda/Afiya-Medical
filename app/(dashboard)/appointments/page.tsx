@@ -1149,16 +1149,22 @@ export default function AppointmentsPage() {
                   {/* Patient: Pending Approval Info */}
                   {!isDoctor && appointment.status === "PENDING" && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 sm:p-3 space-y-1.5 sm:space-y-2">
-                      <div className="flex items-center gap-2 text-yellow-700">
-                        <Clock size={14} className="shrink-0" />
-                        <span className="font-medium text-xs sm:text-sm">
-                          Awaiting Doctor Approval
-                        </span>
+                      <div className="flex items-center justify-between gap-2 text-yellow-700">
+                        <div className="flex items-center gap-2">
+                          <Clock size={14} className="shrink-0" />
+                          <span className="font-medium text-xs sm:text-sm">
+                            Awaiting Doctor Approval
+                          </span>
+                        </div>
+                        <Badge className="bg-yellow-100 text-yellow-800 border border-yellow-200 text-[10px] sm:text-xs px-2 py-0.5">
+                          Wait 10 min
+                        </Badge>
                       </div>
                       <p className="text-xs text-yellow-600">
-                        Your appointment request is pending. You will be
-                        notified once the doctor reviews and confirms your
-                        appointment.
+                        Your appointment request is pending. The doctor will
+                        review it and update you once approved. After 10 minutes
+                        please refresh and check again, and keep an eye on your
+                        email for confirmation.
                       </p>
                     </div>
                   )}

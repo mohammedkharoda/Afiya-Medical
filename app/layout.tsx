@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AppFooter } from "@/components/app-footer";
+import { PwaRegister } from "@/components/pwa-register";
 const mluvka = localFont({
   src: [
     {
@@ -37,6 +38,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Afiya Wellness - Doctor & Patient Portal",
   description: "Your trusted healthcare companion - Medical clinic management for appointments, prescriptions, and medical history",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -62,6 +64,7 @@ export default function RootLayout({
           <div className="flex-1">{children}</div>
           <AppFooter />
         </div>
+        <PwaRegister />
         <Toaster position="top-right" richColors closeButton />
         <SpeedInsights />
       </body>
