@@ -57,6 +57,7 @@ npm run db:studio        # Open Drizzle Studio UI for database inspection
 **Font Files**:
 
 ```
+This are fonts we have used
 Mluvka-Regular-BF65518ac8463f5.otf (400)
 Mluvka-Medium-BF65518ac864edb.otf (500)
 Mluvka-Bold-BF65518ac8cff8c.otf (700)
