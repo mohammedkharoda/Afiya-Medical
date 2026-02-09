@@ -54,7 +54,7 @@ export function DoctorActions({
             )}
             {hasPayment && (
               <span className="text-xs text-muted-foreground">
-                ₹{appointment.payment.amount}
+                ₹{appointment.payment?.amount}
               </span>
             )}
           </div>
