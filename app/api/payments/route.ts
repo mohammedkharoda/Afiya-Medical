@@ -104,6 +104,21 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { appointmentId, amount, paymentMethod, notes, isPaid } = body;
 
+    // Check if payment already exists for this appointment
+    const existingPayment = await db.query.payments.findFirst({
+      where: eq(payments.appointmentId, appointmentId),
+    });
+
+    if (existingPayment) {
+      return NextResponse.json(
+        {
+          error: "Invoice already sent for this appointment",
+          payment: existingPayment,
+        },
+        { status: 400 }
+      );
+    }
+
     const [payment] = await db
       .insert(payments)
       .values({

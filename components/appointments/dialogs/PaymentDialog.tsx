@@ -161,10 +161,13 @@ export function PaymentDialog({
                 ) : (
                   <>
                     <Send className="h-4 w-4 mr-2" />
-                    Send Invoice
+                    Send Invoice to Patient
                   </>
                 )}
               </Button>
+              <p className="text-xs text-center text-slate-500 mt-2">
+                Invoice will be sent via email with payment details
+              </p>
             </div>
           </>
         ) : (

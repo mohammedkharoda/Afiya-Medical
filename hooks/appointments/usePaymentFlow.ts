@@ -55,9 +55,22 @@ export function usePaymentFlow({
         const data = await response.json();
         setCreatedPaymentId(data.payment?.id || null);
         toast.success("Invoice sent to patient's email!");
+
+        // Refresh appointments to sync payment data
+        await fetchAppointments();
+
         setPaymentStep("confirm");
       } else {
-        toast.error("Failed to send invoice");
+        const errorData = await response.json();
+        // Check if invoice already exists for this appointment
+        if (errorData.error?.includes("already exists") || errorData.error?.includes("already sent")) {
+          toast.error("Invoice already sent for this appointment");
+          // Refresh data and go to confirm step
+          await fetchAppointments();
+          setPaymentStep("confirm");
+        } else {
+          toast.error(errorData.error || "Failed to send invoice");
+        }
       }
     } catch {
       toast.error("Failed to send invoice");

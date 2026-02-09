@@ -37,6 +37,7 @@ import { PusherBeamsProvider } from "@/components/pusher-beams-provider";
 import { useLoadingStore } from "@/stores/loading-store";
 import { LoadingOverlay } from "@/components/loading-overlay";
 import { useSessionValidator } from "@/hooks/use-session-validator";
+import { NotificationPermissionPrompt } from "@/components/notification-permission-prompt";
 
 type UserRole = "PATIENT" | "DOCTOR" | "ADMIN";
 
@@ -438,6 +439,12 @@ export default function DashboardLayout({
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6">
           <PusherBeamsProvider userId={userData?.id} userRole={userData?.role}>
             {isLoading ? <LoadingOverlay isLoading={true} /> : children}
+            {!isLoading && userData?.id && userData?.role && (
+              <NotificationPermissionPrompt
+                userId={userData.id}
+                userRole={userData.role}
+              />
+            )}
           </PusherBeamsProvider>
         </main>
       </div>
