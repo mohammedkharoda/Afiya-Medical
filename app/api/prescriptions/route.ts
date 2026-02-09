@@ -10,6 +10,9 @@ import {
 } from "@/lib/db";
 import { eq, desc } from "drizzle-orm";
 import { getSession } from "@/lib/session";
+import { triggerAppointmentUpdate } from "@/lib/pusher";
+import { notifyPatientAppointmentStatusChange } from "@/lib/notifications";
+import { format } from "date-fns";
 
 export async function GET(req: NextRequest) {
   try {
@@ -105,7 +108,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Invalid role" }, { status: 403 });
     }
 
-    return NextResponse.json({ prescriptions: prescriptionsList });
+    return NextResponse.json(
+      { prescriptions: prescriptionsList },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching prescriptions:", error);
     return NextResponse.json(
@@ -144,10 +156,16 @@ export async function POST(req: NextRequest) {
       attachmentPublicId,
     } = body;
 
-    // Get appointment to get patientId and doctorId
+    // Get appointment to get patientId, doctorId, and patient user info
     const appointment = await db.query.appointments.findFirst({
       where: eq(appointments.id, appointmentId),
-      columns: { patientId: true, doctorId: true },
+      with: {
+        patient: {
+          with: {
+            user: true,
+          },
+        },
+      },
     });
 
     if (!appointment) {
@@ -193,8 +211,35 @@ export async function POST(req: NextRequest) {
     // Update appointment status to completed
     await db
       .update(appointments)
-      .set({ status: "COMPLETED" })
+      .set({ status: "COMPLETED", updatedAt: new Date() })
       .where(eq(appointments.id, appointmentId));
+
+    // Trigger real-time update via Pusher for patient sync
+    triggerAppointmentUpdate({
+      id: appointmentId,
+      status: "COMPLETED",
+      patientId: appointment.patientId,
+    }).catch((err) =>
+      console.error("Error triggering appointment update:", err),
+    );
+
+    // Notify patient about appointment completion
+    const patientUserId = appointment.patient?.user?.id;
+    if (patientUserId && appointment.appointmentDate) {
+      const formattedDate = format(
+        new Date(appointment.appointmentDate),
+        "MMMM d, yyyy",
+      );
+      notifyPatientAppointmentStatusChange(
+        patientUserId,
+        "COMPLETED",
+        formattedDate,
+        appointment.appointmentTime,
+        appointment.doctorId || undefined,
+      ).catch((err) =>
+        console.error("Error notifying patient of completion:", err),
+      );
+    }
 
     // Prescription email is sent only after payment is confirmed (PATCH /api/payments)
 

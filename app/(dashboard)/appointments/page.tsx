@@ -190,6 +190,7 @@ export default function AppointmentsPage() {
     try {
       const response = await fetch("/api/appointments", {
         credentials: "include",
+        cache: "no-store",
       });
       const data = await response.json();
       console.log("Appointments page - API response:", data);

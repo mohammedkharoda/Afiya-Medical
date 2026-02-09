@@ -103,7 +103,16 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ appointments: appointmentsList });
+    return NextResponse.json(
+      { appointments: appointmentsList },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching appointments:", error);
     return NextResponse.json(

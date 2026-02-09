@@ -3,7 +3,6 @@ import {
   db,
   appointments,
   payments,
-  patientProfiles,
   users,
   doctorProfiles,
 } from "@/lib/db";
@@ -11,6 +10,8 @@ import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { sendBillingEmail } from "@/lib/email";
 import { format } from "date-fns";
+import { triggerAppointmentUpdate } from "@/lib/pusher";
+import { notifyPatientAppointmentStatusChange } from "@/lib/notifications";
 
 export async function POST(
   req: NextRequest,
@@ -116,6 +117,33 @@ export async function POST(
         billSentAt: new Date(),
       })
       .where(eq(appointments.id, appointmentId));
+
+    // Trigger real-time update via Pusher for patient sync
+    triggerAppointmentUpdate({
+      id: appointmentId,
+      status: "COMPLETED",
+      patientId: appointment.patientId,
+    }).catch((err) =>
+      console.error("Error triggering appointment update:", err),
+    );
+
+    // Notify patient about appointment completion
+    const patientUserId = appointment.patient?.user?.id;
+    if (patientUserId) {
+      const formattedDate = format(
+        new Date(appointment.appointmentDate),
+        "MMMM d, yyyy",
+      );
+      notifyPatientAppointmentStatusChange(
+        patientUserId,
+        "COMPLETED",
+        formattedDate,
+        appointment.appointmentTime,
+        doctorId,
+      ).catch((err) =>
+        console.error("Error notifying patient of completion:", err),
+      );
+    }
 
     // Send billing email to patient if not already paid
     if (!isPaid && appointment.patient?.user?.email) {
