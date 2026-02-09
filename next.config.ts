@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
-import { withBotId } from "botid/next/config";
+// Note: botid SDK requires additional Vercel configuration beyond Bot Management toggle
+// Using Vercel's built-in Bot Management + HCaptcha for protection instead
+// import { withBotId } from "botid/next/config";
 
 const nextConfig: NextConfig = {
   images: {
@@ -34,4 +36,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withBotId(nextConfig);
+export default nextConfig;

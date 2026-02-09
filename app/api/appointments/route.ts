@@ -8,7 +8,7 @@ import {
 } from "@/lib/notifications";
 import { format } from "date-fns";
 import { triggerNewAppointment } from "@/lib/pusher";
-import { checkBotId } from "botid/server";
+// import { checkBotId } from "botid/server";
 
 export async function GET(req: NextRequest) {
   try {
@@ -131,14 +131,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // BotID verification - prevent bots from booking all appointment slots
-    const botVerification = await checkBotId();
-    if (botVerification.isBot) {
-      return NextResponse.json(
-        { error: "Automated requests are not allowed" },
-        { status: 403 },
-      );
-    }
+    // BotID disabled - using Vercel Bot Management + HCaptcha instead
+    // const botVerification = await checkBotId();
+    // if (botVerification.isBot) {
+    //   return NextResponse.json(
+    //     { error: "Automated requests are not allowed" },
+    //     { status: 403 },
+    //   );
+    // }
 
     // Only doctors/admins cannot book appointments
     const role = session.user.role;

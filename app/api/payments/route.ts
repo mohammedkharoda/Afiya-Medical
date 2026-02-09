@@ -13,7 +13,7 @@ import { eq, desc, or, and, inArray } from "drizzle-orm";
 import { getSession } from "@/lib/session";
 import { sendPrescriptionEmail, sendBillingEmail } from "@/lib/email";
 import { format } from "date-fns";
-import { checkBotId } from "botid/server";
+// import { checkBotId } from "botid/server";
 
 export async function GET(req: NextRequest) {
   try {
@@ -85,14 +85,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // BotID verification - protect financial operations
-    const botVerification = await checkBotId();
-    if (botVerification.isBot) {
-      return NextResponse.json(
-        { error: "Automated requests are not allowed" },
-        { status: 403 },
-      );
-    }
+    // BotID disabled - using Vercel Bot Management instead
+    // const botVerification = await checkBotId();
+    // if (botVerification.isBot) {
+    //   return NextResponse.json(
+    //     { error: "Automated requests are not allowed" },
+    //     { status: 403 },
+    //   );
+    // }
 
     const normalizedRole = session.user.role?.toUpperCase();
 
@@ -192,14 +192,14 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // BotID verification - protect financial operations
-    const botVerification = await checkBotId();
-    if (botVerification.isBot) {
-      return NextResponse.json(
-        { error: "Automated requests are not allowed" },
-        { status: 403 },
-      );
-    }
+    // BotID disabled - using Vercel Bot Management instead
+    // const botVerification = await checkBotId();
+    // if (botVerification.isBot) {
+    //   return NextResponse.json(
+    //     { error: "Automated requests are not allowed" },
+    //     { status: 403 },
+    //   );
+    // }
 
     const body = await req.json();
     const { paymentId, status } = body;
