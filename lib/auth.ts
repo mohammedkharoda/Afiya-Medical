@@ -6,7 +6,11 @@ import { sendVerificationEmail } from "./email";
 
 // Get trusted origins for CORS
 const getTrustedOrigins = (): string[] => {
-  const origins: string[] = ["http://localhost:3000"];
+  const origins: string[] = [
+    "http://localhost:3000",
+    "https://afiya.co.in", // Custom production domain
+    "https://www.afiya.co.in",
+  ];
 
   // Add custom domain if configured
   if (process.env.NEXT_PUBLIC_APP_URL) {

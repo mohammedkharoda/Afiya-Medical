@@ -147,10 +147,8 @@ export default function DashboardLayout({
         const response = await fetch("/api/user/me", {
           credentials: "include",
         });
-        console.log("API response status:", response.status);
         if (response.ok) {
           const data = await response.json();
-          console.log("Fetched user data:", data);
           setUserData(data.user);
 
           // Redirect admin to invitations page if on dashboard

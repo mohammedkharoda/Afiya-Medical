@@ -77,7 +77,6 @@ function AppointmentBookingContent() {
         });
         if (response.ok) {
           const data = await response.json();
-          console.log("Fetched user data:", data.user);
           setUserData(data.user);
           if (data.preferredDoctor) {
             setPreferredDoctor(data.preferredDoctor);
