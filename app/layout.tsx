@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AppFooter } from "@/components/app-footer";
 import { PwaRegister } from "@/components/pwa-register";
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 const mluvka = localFont({
   src: [
     {
@@ -43,12 +44,36 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "default",
     title: "Afiya Wellness",
+    startupImage: [
+      {
+        url: "/web-app-manifest-512x512.png",
+        media: "(device-width: 768px) and (device-height: 1024px)",
+      },
+    ],
   },
   formatDetection: {
     telephone: true,
   },
+  applicationName: "Afiya Wellness",
+  keywords: [
+    "healthcare",
+    "medical",
+    "appointments",
+    "prescriptions",
+    "doctor",
+    "patient portal",
+    "clinic management",
+  ],
+  authors: [{ name: "Afiya Wellness" }],
+  creator: "Afiya Wellness",
+  publisher: "Afiya Wellness",
+  alternates: {
+    canonical: "/",
+  },
   other: {
     "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "default",
   },
 };
 
@@ -65,6 +90,7 @@ export default function RootLayout({
           <AppFooter />
         </div>
         <PwaRegister />
+        <PwaInstallPrompt />
         <Toaster position="top-right" richColors closeButton />
         <SpeedInsights />
       </body>

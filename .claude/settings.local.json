@@ -29,7 +29,8 @@
       "Bash(cmdkey /delete:*)",
       "Bash(ssh:*)",
       "Bash(del nul)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(\"d:\\\\Codes\\\\afiya\\\\app\\\\offline\\\\page.tsx\" << 'EOF'\nimport { WifiOff, RefreshCw } from \"lucide-react\";\nimport { Button } from \"@/components/ui/button\";\n\nexport default function OfflinePage\\(\\) {\n  return \\(\n    <div className=\"flex min-h-screen items-center justify-center bg-background px-4\">\n      <div className=\"mx-auto max-w-md text-center\">\n        <div className=\"mb-6 flex justify-center\">\n          <div className=\"flex h-20 w-20 items-center justify-center rounded-full bg-muted\">\n            <WifiOff className=\"h-10 w-10 text-muted-foreground\" />\n          </div>\n        </div>\n        <h1 className=\"mb-3 text-2xl font-bold text-foreground\">\n          You&apos;re Offline\n        </h1>\n        <p className=\"mb-6 text-muted-foreground\">\n          It looks like you&apos;re not connected to the internet. Please check\n          your connection and try again.\n        </p>\n        <Button\n          onClick={\\(\\) => window.location.reload\\(\\)}\n          className=\"gap-2\"\n          size=\"lg\"\n        >\n          <RefreshCw className=\"h-4 w-4\" />\n          Try Again\n        </Button>\n        <div className=\"mt-8 text-sm text-muted-foreground\">\n          <p>\n            Some features may still be available offline. Once you&apos;re back\n            online, your data will sync automatically.\n          </p>\n        </div>\n      </div>\n    </div>\n  \\);\n}\nEOF)"
     ]
   }
 }
