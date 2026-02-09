@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import withPWA from "next-pwa";
 
 // Note: botid SDK requires additional Vercel configuration beyond Bot Management toggle
 // Using Vercel's built-in Bot Management + HCaptcha for protection instead
@@ -47,18 +46,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Configure PWA
-const pwaConfig = withPWA({
-  dest: "public",
-  disable: process.env.NODE_ENV === "development",
-  register: false, // We use custom registration in PwaRegister component
-  skipWaiting: true,
-  sw: "service-worker.js",
-  scope: "/",
-  reloadOnOnline: true,
-  fallbacks: {
-    document: "/offline",
-  },
-});
-
-export default pwaConfig(nextConfig);
+export default nextConfig;
