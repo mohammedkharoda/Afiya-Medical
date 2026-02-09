@@ -8,6 +8,7 @@ import { sendOtpEmail } from "@/lib/email";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { createId } from "@paralleldrive/cuid2";
 import { verifyHCaptcha } from "@/lib/hcaptcha";
+import { checkBotId } from "botid/server";
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,6 +22,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: captchaCheck.error || "Captcha verification failed" },
         { status: 400 },
+      );
+    }
+
+    // BotID verification (additional layer of bot protection)
+    const botVerification = await checkBotId();
+    if (botVerification.isBot) {
+      return NextResponse.json(
+        { error: "Automated requests are not allowed" },
+        { status: 403 },
       );
     }
 
