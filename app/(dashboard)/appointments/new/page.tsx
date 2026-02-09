@@ -141,8 +141,6 @@ function AppointmentBookingContent() {
           { credentials: "include" },
         );
         const data = await response.json();
-        console.log("Available slots response:", data);
-        console.log("Slots array:", data.slots, "Length:", data.slots?.length);
 
         if (!response.ok) {
           toast.error(data.error || "Failed to load available slots");

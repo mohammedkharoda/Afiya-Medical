@@ -68,15 +68,26 @@ export async function POST(req: NextRequest) {
     });
 
     // Create response with session cookie
-    const response = NextResponse.json({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
+    const response = NextResponse.json(
+      {
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        },
       },
-    });
+      {
+        headers: {
+          // Prevent caching of login response
+          "Cache-Control":
+            "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      },
+    );
 
     // Set session cookie
     response.cookies.set("better-auth.session_token", sessionToken, {

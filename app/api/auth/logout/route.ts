@@ -12,8 +12,19 @@ export async function POST(req: NextRequest) {
       await db.delete(sessions).where(eq(sessions.token, sessionToken));
     }
 
-    // Create response
-    const response = NextResponse.json({ success: true });
+    // Create response with no-cache headers
+    const response = NextResponse.json(
+      { success: true },
+      {
+        headers: {
+          // Prevent caching of logout response
+          "Cache-Control":
+            "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      },
+    );
 
     // Clear the cookie with all necessary attributes for production
     const isProduction = process.env.NODE_ENV === "production";
@@ -34,7 +45,15 @@ export async function POST(req: NextRequest) {
     // Still try to clear cookie even on error
     const response = NextResponse.json(
       { success: false, error: "Logout failed" },
-      { status: 500 },
+      {
+        status: 500,
+        headers: {
+          "Cache-Control":
+            "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      },
     );
 
     response.cookies.set("better-auth.session_token", "", {

@@ -31,18 +31,31 @@ export async function middleware(request: NextRequest) {
   // Get session from cookie
   const sessionToken = request.cookies.get("better-auth.session_token");
 
+  // Helper function to create non-cached redirect
+  const createRedirect = (url: string) => {
+    const response = NextResponse.redirect(new URL(url, request.url));
+    // Prevent caching of redirects
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate",
+    );
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+    return response;
+  };
+
   // Root path "/" - redirect to dashboard if authenticated, otherwise to login
   if (pathname === "/") {
     if (sessionToken) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return createRedirect("/dashboard");
     } else {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return createRedirect("/login");
     }
   }
 
   // If not authenticated and trying to access protected route
   if (!sessionToken && !isPublicRoute) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return createRedirect("/login");
   }
 
   // If authenticated and trying to access auth pages, redirect to dashboard
@@ -51,10 +64,21 @@ export async function middleware(request: NextRequest) {
     sessionToken &&
     (pathname.startsWith("/login") || pathname.startsWith("/register"))
   ) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return createRedirect("/dashboard");
   }
 
-  return NextResponse.next();
+  // Add no-cache headers to protected pages
+  const response = NextResponse.next();
+  if (!isPublicRoute) {
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate",
+    );
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+  }
+
+  return response;
 }
 
 export const config = {

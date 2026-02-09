@@ -1,8 +1,8 @@
 importScripts("https://js.pusher.com/beams/service-worker.js");
 
-const CACHE_NAME = "afiya-pwa-v2";
+// Bump version to clear old caches
+const CACHE_NAME = "afiya-pwa-v3";
 const APP_SHELL = [
-  "/",
   "/manifest.json",
   "/web-app-manifest-192x192.png",
   "/web-app-manifest-512x512.png",
@@ -48,21 +48,28 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // NEVER cache JavaScript or CSS - always fetch fresh to prevent stale code
+  if (url.pathname.match(/\.(js|css)$/)) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // Don't cache Next.js chunks or build files
+  if (url.pathname.startsWith("/_next/")) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   if (request.mode === "navigate") {
+    // Always fetch fresh navigation requests (HTML pages)
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/", responseClone));
-          return response;
-        })
-        .catch(() => caches.match("/")),
+      fetch(request).catch(() => caches.match("/manifest.json")),
     );
     return;
   }
 
-  // Only cache static assets (images, fonts, etc.)
-  const isStaticAsset = url.pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|otf|css|js)$/);
+  // Only cache images and fonts (NOT JS/CSS)
+  const isStaticAsset = url.pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|otf)$/);
 
   if (isStaticAsset) {
     event.respondWith(
@@ -79,6 +86,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // For all other requests, use network-first strategy
+  // For all other requests, use network-first strategy (never cache)
   event.respondWith(fetch(request));
 });

@@ -62,30 +62,58 @@ function LoginForm() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
         },
         body: JSON.stringify(data),
         credentials: "include",
+        cache: "no-store",
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        toast.error(result.error || "Login failed");
+        // Show specific error message from the API
+        const errorMessage = result.error || "Login failed";
+
+        // Provide helpful context based on error type
+        if (errorMessage.includes("email")) {
+          toast.error(errorMessage, {
+            description: "Please check your email address and try again.",
+          });
+        } else if (errorMessage.includes("password")) {
+          toast.error(errorMessage, {
+            description: "Please check your password and try again.",
+          });
+        } else if (errorMessage.includes("verify")) {
+          toast.error(errorMessage, {
+            description: "Check your inbox for the verification email.",
+          });
+        } else {
+          toast.error(errorMessage);
+        }
+
+        // IMPORTANT: Reset loading state so user can try again
+        setLoading(false);
         return;
       }
 
       toast.success("Welcome back!");
+
+      // Small delay to ensure cookie is set
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Determine if patient has completed medical history; redirect accordingly
       if (result.user?.role === "PATIENT") {
         try {
           const mhRes = await fetch("/api/medical-history", {
             credentials: "include",
+            cache: "no-store",
           });
           const mhJson = await mhRes.json();
           const hasHistory = mhJson?.medicalHistory;
           if (!hasHistory) {
-            router.push("/medical-history/new");
+            // Use window.location for hard navigation to ensure middleware runs
+            window.location.href = "/medical-history/new";
             return;
           }
         } catch {
@@ -93,11 +121,13 @@ function LoginForm() {
         }
       }
 
-      router.push("/dashboard");
-      router.refresh();
-    } catch {
-      toast.error("An unexpected error occurred");
-    } finally {
+      // Use window.location for hard navigation to ensure middleware runs with new session
+      window.location.href = "/dashboard";
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error("Network error", {
+        description: "Please check your internet connection and try again.",
+      });
       setLoading(false);
     }
   };
