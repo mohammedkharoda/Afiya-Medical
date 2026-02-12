@@ -8,6 +8,7 @@ export type DialogType =
   | "patient_cancel"
   | "reschedule"
   | "payment"
+  | "approve_video"
   | "view_prescription"
   | null;
 
@@ -30,6 +31,7 @@ export function useDialogState() {
   );
   const [sendingInvoice, setSendingInvoice] = useState(false);
   const [createdPaymentId, setCreatedPaymentId] = useState<string | null>(null);
+  const [videoConsultationFee, setVideoConsultationFee] = useState("");
 
   const closePrescriptionDialog = () => {
     setDialogType(null);
@@ -64,6 +66,12 @@ export function useDialogState() {
     setSelectedAppointment(null);
   };
 
+  const closeApproveVideoDialog = () => {
+    setDialogType(null);
+    setSelectedAppointment(null);
+    setVideoConsultationFee("");
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedUPI(true);
@@ -93,11 +101,14 @@ export function useDialogState() {
     setSendingInvoice,
     createdPaymentId,
     setCreatedPaymentId,
+    videoConsultationFee,
+    setVideoConsultationFee,
     closePrescriptionDialog,
     closeNotesDialog,
     closeRescheduleDialog,
     closePaymentDialog,
     closeViewPrescriptionDialog,
+    closeApproveVideoDialog,
     copyToClipboard,
   };
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, appointments } from "@/lib/db";
+import { db, appointments, doctorProfiles } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/session";
 import { triggerAppointmentUpdate } from "@/lib/pusher";
@@ -26,6 +26,16 @@ export async function POST(
     }
 
     const { id: appointmentId } = await params;
+    let videoConsultationFee: number | null = null;
+
+    try {
+      const body = await req.json();
+      if (body?.videoConsultationFee !== undefined) {
+        videoConsultationFee = Number(body.videoConsultationFee);
+      }
+    } catch {
+      // Non-video approvals can be submitted without a JSON body.
+    }
 
     // Get the appointment with patient info
     const appointment = await db.query.appointments.findFirst({
@@ -52,15 +62,69 @@ export async function POST(
       );
     }
 
+    if (session.user.role !== "ADMIN" &&
+        appointment.doctorId &&
+        appointment.doctorId !== session.user.id) {
+      return NextResponse.json(
+        { error: "You are not authorized to approve this appointment" },
+        { status: 403 },
+      );
+    }
+
+    const now = new Date();
+    const updateData: Record<string, unknown> = {
+      status: "SCHEDULED",
+      approvedAt: now,
+      approvedBy: session.user.id,
+      updatedAt: now,
+    };
+
+    if (appointment.isVideoConsultation) {
+      if (!Number.isFinite(videoConsultationFee) || (videoConsultationFee ?? 0) <= 0) {
+        return NextResponse.json(
+          { error: "A valid video consultation amount is required" },
+          { status: 400 },
+        );
+      }
+
+      const approvingDoctorId = appointment.doctorId || session.user.id;
+      const doctorProfile = await db.query.doctorProfiles.findFirst({
+        where: eq(doctorProfiles.userId, approvingDoctorId),
+      });
+
+      if (!doctorProfile?.upiId) {
+        return NextResponse.json(
+          { error: "Doctor UPI details are required before approving video consultation" },
+          { status: 400 },
+        );
+      }
+
+      const normalizedFee = Math.round((videoConsultationFee ?? 0) * 100) / 100;
+      const depositAmount = Math.round((normalizedFee * 0.5) * 100) / 100;
+      const remainingAmount = Math.round((normalizedFee - depositAmount) * 100) / 100;
+
+      updateData.videoConsultationFee = normalizedFee;
+      updateData.depositAmount = depositAmount;
+      updateData.depositPaid = false;
+      updateData.depositConfirmedAt = null;
+      updateData.depositVerifiedAt = null;
+      updateData.depositPaymentScreenshot = null;
+      updateData.depositCancellationScheduledAt = new Date(
+        now.getTime() + 24 * 60 * 60 * 1000,
+      );
+      updateData.remainingAmount = remainingAmount;
+      updateData.remainingPaid = false;
+      updateData.remainingConfirmedAt = null;
+      updateData.remainingVerifiedAt = null;
+      updateData.remainingPaymentScreenshot = null;
+      updateData.prescriptionWithheld = true;
+      updateData.paymentStatus = "PENDING";
+    }
+
     // Update appointment to approved (SCHEDULED)
     const [updatedAppointment] = await db
       .update(appointments)
-      .set({
-        status: "SCHEDULED",
-        approvedAt: new Date(),
-        approvedBy: session.user.id,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(appointments.id, appointmentId))
       .returning();
 

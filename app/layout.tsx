@@ -84,7 +84,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${mluvka.variable} antialiased`}>
+      <body
+        className={`${mluvka.variable} antialiased`}
+        suppressHydrationWarning
+      >
         <div className="flex min-h-screen flex-col">
           <div className="flex-1">{children}</div>
           <AppFooter />

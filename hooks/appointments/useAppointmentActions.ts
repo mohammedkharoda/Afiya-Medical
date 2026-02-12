@@ -24,21 +24,28 @@ export function useAppointmentActions({
     action: string;
   } | null>(null);
 
-  const handleApprove = async (appointmentId: string) => {
+  const handleApprove = async (
+    appointmentId: string,
+    videoConsultationFee?: number,
+  ) => {
     setActionLoading({ id: appointmentId, action: "approve" });
     try {
-      const response = await fetch(
-        `/api/appointments/${appointmentId}/approve`,
-        {
-          method: "POST",
-          credentials: "include",
-        },
-      );
+      const response = await fetch(`/api/appointments/${appointmentId}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          ...(videoConsultationFee !== undefined
+            ? { videoConsultationFee }
+            : {}),
+        }),
+      });
 
       if (response.ok) {
+        const data = await response.json();
         setAppointments((prev) =>
           prev.map((a) =>
-            a.id === appointmentId ? { ...a, status: "SCHEDULED" } : a,
+            a.id === appointmentId ? { ...a, ...data.appointment } : a,
           ),
         );
         toast.success("Appointment approved!");
@@ -49,6 +56,47 @@ export function useAppointmentActions({
       }
     } catch {
       toast.error("Failed to approve appointment");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleApproveVideo = (appointment: Appointment) => {
+    // Open the video consultation approval dialog
+    setSelectedAppointment(appointment);
+    setDialogType("approve_video");
+  };
+
+  const handleConfirmVideoApproval = async (
+    appointmentId: string,
+    videoConsultationFee: number,
+  ) => {
+    setActionLoading({ id: appointmentId, action: "approve" });
+    try {
+      const response = await fetch(`/api/appointments/${appointmentId}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ videoConsultationFee }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAppointments((prev) =>
+          prev.map((a) =>
+            a.id === appointmentId ? { ...a, ...data.appointment } : a,
+          ),
+        );
+        toast.success("Video consultation approved! Patient notified of deposit amount.");
+        setDialogType(null);
+        setSelectedAppointment(null);
+        await fetchAppointments();
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Failed to approve video consultation");
+      }
+    } catch {
+      toast.error("Failed to approve video consultation");
     } finally {
       setActionLoading(null);
     }
@@ -327,6 +375,8 @@ export function useAppointmentActions({
   return {
     actionLoading,
     handleApprove,
+    handleApproveVideo,
+    handleConfirmVideoApproval,
     handleDecline,
     handlePatientCancel,
     handleStatusChange,

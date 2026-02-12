@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
     let paymentsList;
 
     if (normalizedRole === "PATIENT") {
+      // Get patient profile
       const patientProfile = await db.query.patientProfiles.findFirst({
         where: eq(patientProfiles.userId, userId),
       });
@@ -37,18 +38,57 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ payments: [] });
       }
 
+      // Fetch only appointments for this patient
+      const patientAppointments = await db.query.appointments.findMany({
+        where: eq(appointments.patientId, patientProfile.id),
+        columns: { id: true },
+      });
+
+      const appointmentIds = patientAppointments.map((a) => a.id);
+
+      if (appointmentIds.length === 0) {
+        return NextResponse.json({ payments: [] });
+      }
+
+      // Fetch only payments for this patient's appointments
       paymentsList = await db.query.payments.findMany({
+        where: inArray(payments.appointmentId, appointmentIds),
         with: {
           appointment: true,
         },
         orderBy: [desc(payments.createdAt)],
       });
+    } else if (normalizedRole === "DOCTOR") {
+      // For doctors: only show payments from appointments they handled
+      const doctorAppointments = await db.query.appointments.findMany({
+        where: eq(appointments.doctorId, userId),
+        columns: { id: true },
+      });
 
-      // Filter payments for patient's appointments
-      paymentsList = paymentsList.filter(
-        (p) => p.appointment.patientId === patientProfile.id,
-      );
-    } else if (normalizedRole === "DOCTOR" || normalizedRole === "ADMIN") {
+      const appointmentIds = doctorAppointments.map((a) => a.id);
+
+      if (appointmentIds.length === 0) {
+        return NextResponse.json({ payments: [] });
+      }
+
+      // Fetch only payments for this doctor's appointments
+      paymentsList = await db.query.payments.findMany({
+        where: inArray(payments.appointmentId, appointmentIds),
+        with: {
+          appointment: {
+            with: {
+              patient: {
+                with: {
+                  user: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: [desc(payments.createdAt)],
+      });
+    } else if (normalizedRole === "ADMIN") {
+      // Admins can see all payments
       paymentsList = await db.query.payments.findMany({
         with: {
           appointment: {

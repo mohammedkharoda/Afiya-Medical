@@ -20,6 +20,7 @@ import {
   Clock,
   TrendingUp,
   UserPlus,
+  Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +60,12 @@ const navItems: NavItem[] = [
     label: "Appointments",
     href: "/appointments",
     icon: <Calendar size={20} />,
+    roles: ["PATIENT", "DOCTOR"],
+  },
+  {
+    label: "Video Consultations",
+    href: "/video-consultations",
+    icon: <Video size={20} />,
     roles: ["PATIENT", "DOCTOR"],
   },
   {

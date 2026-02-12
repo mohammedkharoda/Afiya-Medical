@@ -86,6 +86,8 @@ export async function POST(
       where: eq(doctorProfiles.userId, doctorId),
     });
 
+    const isVideoConsultation = appointment.isVideoConsultation;
+
     // Update appointment status to COMPLETED
     await db
       .update(appointments)
@@ -95,28 +97,58 @@ export async function POST(
       })
       .where(eq(appointments.id, appointmentId));
 
-    // Create payment record
-    const [payment] = await db
-      .insert(payments)
-      .values({
-        appointmentId,
-        amount: consultationFee,
-        paymentMethod,
-        status: isPaid ? "PAID" : "PENDING",
-        paidAt: isPaid ? new Date() : null,
-        notes,
-      })
-      .returning();
+    // Handle payment based on consultation type
+    let payment;
 
-    // Update appointment payment status
-    await db
-      .update(appointments)
-      .set({
-        paymentStatus: isPaid ? "PAID" : "PENDING",
-        billSent: true,
-        billSentAt: new Date(),
-      })
-      .where(eq(appointments.id, appointmentId));
+    if (isVideoConsultation) {
+      // For video consultations, create remaining payment record (50%)
+      // Prescription will be withheld until this payment is verified
+      [payment] = await db
+        .insert(payments)
+        .values({
+          appointmentId,
+          amount: appointment.remainingAmount || (consultationFee * 0.5),
+          paymentMethod: "UPI_MANUAL",
+          status: "PENDING",
+          notes: `Remaining payment (50%) for video consultation - Pay to doctor's UPI ID`,
+          verifiedByDoctor: false,
+        })
+        .returning();
+
+      // Update appointment - prescription withheld until remaining payment verified
+      await db
+        .update(appointments)
+        .set({
+          paymentStatus: "PENDING",
+          prescriptionWithheld: true,
+          prescriptionSent: false,
+          billSent: false, // Don't send bill yet, will send after payment
+        })
+        .where(eq(appointments.id, appointmentId));
+    } else {
+      // For regular appointments, create normal payment record
+      [payment] = await db
+        .insert(payments)
+        .values({
+          appointmentId,
+          amount: consultationFee,
+          paymentMethod,
+          status: isPaid ? "PAID" : "PENDING",
+          paidAt: isPaid ? new Date() : null,
+          notes,
+        })
+        .returning();
+
+      // Update appointment payment status
+      await db
+        .update(appointments)
+        .set({
+          paymentStatus: isPaid ? "PAID" : "PENDING",
+          billSent: true,
+          billSentAt: new Date(),
+        })
+        .where(eq(appointments.id, appointmentId));
+    }
 
     // Trigger real-time update via Pusher for patient sync
     triggerAppointmentUpdate({
@@ -145,8 +177,8 @@ export async function POST(
       );
     }
 
-    // Send billing email to patient if not already paid
-    if (!isPaid && appointment.patient?.user?.email) {
+    // Send billing email to patient if not already paid (skip for video consultations - will send after remaining payment)
+    if (!isPaid && !isVideoConsultation && appointment.patient?.user?.email) {
       const billingData = {
         patientEmail: appointment.patient.user.email,
         patientName: appointment.patient.user.name,

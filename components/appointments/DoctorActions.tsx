@@ -8,11 +8,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Appointment } from "./types";
+import { VerifyDepositButton } from "./VerifyDepositButton";
+import { JoinMeetingButton } from "./JoinMeetingButton";
+import { VerifyRemainingPaymentButton } from "./VerifyRemainingPaymentButton";
 
 interface DoctorActionsProps {
   appointment: Appointment;
   actionLoading: { id: string; action: string } | null;
   onApprove: (appointmentId: string) => void;
+  onApproveVideo: (appointment: Appointment) => void;
   onDecline: (appointment: Appointment) => void;
   onStartPrescription: (appointment: Appointment) => void;
   onReschedule: (appointment: Appointment) => void;
@@ -24,6 +28,7 @@ export function DoctorActions({
   appointment,
   actionLoading,
   onApprove,
+  onApproveVideo,
   onDecline,
   onStartPrescription,
   onReschedule,
@@ -60,8 +65,20 @@ export function DoctorActions({
           </div>
         )}
 
-        {/* Record Payment Button - show if no payment or payment is pending */}
-        {(!hasPayment || isPending) && onRecordPayment && (
+        {/* Verify remaining payment for video consultations */}
+        {appointment.isVideoConsultation &&
+         appointment.remainingConfirmedAt &&
+         !appointment.remainingPaid && (
+          <div className="pt-2 border-t">
+            <VerifyRemainingPaymentButton
+              appointmentId={appointment.id}
+              paymentScreenshot={appointment.remainingPaymentScreenshot}
+            />
+          </div>
+        )}
+
+        {/* Record Payment Button - show if no payment or payment is pending (for non-video consultations) */}
+        {!appointment.isVideoConsultation && (!hasPayment || isPending) && onRecordPayment && (
           <div className="flex items-center gap-1.5 sm:gap-2 pt-2 border-t flex-wrap">
             <Button
               size="sm"
@@ -81,31 +98,49 @@ export function DoctorActions({
   // Pending appointments: Approve/Decline
   if (appointment.status === "PENDING") {
     return (
-      <div className="flex items-center gap-1.5 sm:gap-2 pt-2 border-t flex-wrap">
-        <Button
-          size="sm"
-          onClick={() => onApprove(appointment.id)}
-          className="bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
-          disabled={actionLoading?.id === appointment.id}
-        >
-          {actionLoading?.id === appointment.id &&
-          actionLoading?.action === "approve" ? (
-            <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1" />
-          ) : (
-            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-          )}
-          Approve
-        </Button>
-        <Button
-          size="sm"
-          variant="destructive"
-          onClick={() => onDecline(appointment)}
-          className="bg-red-500 hover:bg-red-600 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
-          disabled={actionLoading?.id === appointment.id}
-        >
-          <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-          Decline
-        </Button>
+      <div className="space-y-2">
+        {/* Verify deposit button for video consultations with confirmed deposits */}
+        {appointment.isVideoConsultation &&
+         appointment.depositConfirmedAt &&
+         !appointment.depositPaid && (
+          <div className="pt-2 border-t">
+            <VerifyDepositButton
+              appointmentId={appointment.id}
+              paymentScreenshot={appointment.depositPaymentScreenshot}
+            />
+          </div>
+        )}
+
+        <div className="flex items-center gap-1.5 sm:gap-2 pt-2 border-t flex-wrap">
+          <Button
+            size="sm"
+            onClick={() =>
+              appointment.isVideoConsultation
+                ? onApproveVideo(appointment)
+                : onApprove(appointment.id)
+            }
+            className="bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
+            disabled={actionLoading?.id === appointment.id}
+          >
+            {actionLoading?.id === appointment.id &&
+            actionLoading?.action === "approve" ? (
+              <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1" />
+            ) : (
+              <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+            )}
+            {appointment.isVideoConsultation ? "Set Fee & Approve" : "Approve"}
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => onDecline(appointment)}
+            className="bg-red-500 hover:bg-red-600 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
+            disabled={actionLoading?.id === appointment.id}
+          >
+            <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+            Decline
+          </Button>
+        </div>
       </div>
     );
   }
@@ -116,52 +151,79 @@ export function DoctorActions({
     appointment.status === "RESCHEDULED"
   ) {
     return (
-      <div className="flex items-center gap-1.5 sm:gap-2 pt-2 border-t flex-wrap">
-        <Button
-          size="sm"
-          onClick={() => onStartPrescription(appointment)}
-          className="bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
-          disabled={actionLoading?.id === appointment.id}
-        >
-          {actionLoading?.id === appointment.id ? (
-            <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1" />
-          ) : (
-            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-          )}
-          <span className="hidden xs:inline">Start Prescription</span>
-          <span className="xs:hidden">Prescription</span>
-        </Button>
-        {/* Only show Reschedule button for SCHEDULED status - not for already rescheduled */}
-        {appointment.status === "SCHEDULED" && (
+      <div className="space-y-2">
+        {/* Verify deposit button for video consultations with confirmed deposits */}
+        {appointment.isVideoConsultation &&
+         appointment.depositConfirmedAt &&
+         !appointment.depositPaid && (
+          <div className="pt-2 border-t">
+            <VerifyDepositButton
+              appointmentId={appointment.id}
+              paymentScreenshot={appointment.depositPaymentScreenshot}
+            />
+          </div>
+        )}
+
+        {/* Join Meeting Button for video consultations */}
+        {appointment.isVideoConsultation && appointment.depositPaid && (
+          <div className="pt-2 border-t">
+            <JoinMeetingButton
+              appointmentId={appointment.id}
+              appointmentDate={new Date(appointment.appointmentDate)}
+              appointmentTime={appointment.appointmentTime}
+              meetingUrl={appointment.videoMeetingUrl}
+              depositPaid={appointment.depositPaid}
+            />
+          </div>
+        )}
+
+        <div className="flex items-center gap-1.5 sm:gap-2 pt-2 border-t flex-wrap">
           <Button
             size="sm"
-            variant="outline"
-            className="border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
-            onClick={() => onReschedule(appointment)}
+            onClick={() => onStartPrescription(appointment)}
+            className="bg-green-500 hover:bg-green-600 text-white text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
             disabled={actionLoading?.id === appointment.id}
           >
             {actionLoading?.id === appointment.id ? (
               <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1" />
             ) : (
-              <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+              <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
             )}
-            Reschedule
+            <span className="hidden xs:inline">Start Prescription</span>
+            <span className="xs:hidden">Prescription</span>
           </Button>
-        )}
-        <Button
-          size="sm"
-          variant="destructive"
-          onClick={() => onCancel(appointment)}
-          className="bg-red-500 hover:bg-red-600 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
-          disabled={actionLoading?.id === appointment.id}
-        >
-          {actionLoading?.id === appointment.id ? (
-            <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1" />
-          ) : (
-            <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+          {/* Only show Reschedule button for SCHEDULED status - not for already rescheduled */}
+          {appointment.status === "SCHEDULED" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
+              onClick={() => onReschedule(appointment)}
+              disabled={actionLoading?.id === appointment.id}
+            >
+              {actionLoading?.id === appointment.id ? (
+                <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1" />
+              ) : (
+                <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+              )}
+              Reschedule
+            </Button>
           )}
-          Cancel
-        </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => onCancel(appointment)}
+            className="bg-red-500 hover:bg-red-600 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-3"
+            disabled={actionLoading?.id === appointment.id}
+          >
+            {actionLoading?.id === appointment.id ? (
+              <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin mr-1" />
+            ) : (
+              <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+            )}
+            Cancel
+          </Button>
+        </div>
       </div>
     );
   }

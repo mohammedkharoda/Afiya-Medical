@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, appointments, patientProfiles, users } from "@/lib/db";
-import { eq, and, ne, gte, lt, or } from "drizzle-orm";
+import { db, appointments, patientProfiles, users, doctorProfiles } from "@/lib/db";
+import { eq, and, ne, gte, lt, or, inArray } from "drizzle-orm";
 import { getSession } from "@/lib/session";
 import {
   notifyPatientAppointmentPending,
@@ -9,6 +9,73 @@ import {
 import { format } from "date-fns";
 import { triggerNewAppointment } from "@/lib/pusher";
 // import { checkBotId } from "botid/server";
+
+async function enrichAppointmentsWithDoctorPaymentDetails<T extends {
+  doctorId?: string | null;
+}>(appointmentsList: T[]): Promise<(T & {
+  doctorName: string | null;
+  doctorUpiId: string | null;
+  doctorUpiQrCode: string | null;
+})[]> {
+  const doctorIds = Array.from(
+    new Set(
+      appointmentsList
+        .map((appointment) => appointment.doctorId)
+        .filter((doctorId): doctorId is string => Boolean(doctorId)),
+    ),
+  );
+
+  if (doctorIds.length === 0) {
+    return appointmentsList.map((appointment) => ({
+      ...appointment,
+      doctorName: null,
+      doctorUpiId: null,
+      doctorUpiQrCode: null,
+    }));
+  }
+
+  const doctorRows = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      upiId: doctorProfiles.upiId,
+      upiQrCode: doctorProfiles.upiQrCode,
+    })
+    .from(users)
+    .leftJoin(doctorProfiles, eq(users.id, doctorProfiles.userId))
+    .where(inArray(users.id, doctorIds));
+
+  const doctorMap = new Map(
+    doctorRows.map((doctor) => [
+      doctor.id,
+      {
+        doctorName: doctor.name,
+        doctorUpiId: doctor.upiId,
+        doctorUpiQrCode: doctor.upiQrCode,
+      },
+    ]),
+  );
+
+  return appointmentsList.map((appointment) => {
+    if (!appointment.doctorId) {
+      return {
+        ...appointment,
+        doctorName: null,
+        doctorUpiId: null,
+        doctorUpiQrCode: null,
+      };
+    }
+
+    const doctorData = doctorMap.get(appointment.doctorId);
+
+    return {
+      ...appointment,
+      doctorName: doctorData?.doctorName ?? null,
+      doctorUpiId: doctorData?.doctorUpiId ?? null,
+      doctorUpiQrCode: doctorData?.doctorUpiQrCode ?? null,
+    };
+  });
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,23 +89,36 @@ export async function GET(req: NextRequest) {
     const userId = session.user.id;
     const role = session.user.role || "PATIENT";
 
+    // Get query parameter for filtering video consultations
+    const { searchParams } = new URL(req.url);
+    const type = searchParams.get("type");
+
     console.log("Appointments API - User ID:", userId);
     console.log("Appointments API - Role:", role);
+    console.log("Appointments API - Type filter:", type);
 
     let appointmentsList;
 
     if (role === "DOCTOR") {
       // Doctor sees only appointments assigned to them or that they've handled
+      const baseCondition = or(
+        // Appointments assigned to this doctor (any status)
+        eq(appointments.doctorId, userId),
+        // Appointments this doctor has handled (approved, declined, cancelled, rescheduled)
+        eq(appointments.approvedBy, userId),
+        eq(appointments.declinedBy, userId),
+        eq(appointments.cancelledBy, userId),
+        eq(appointments.rescheduledBy, userId),
+      );
+
+      // Apply video consultation filter if requested
+      const whereClause =
+        type === "video"
+          ? and(baseCondition, eq(appointments.isVideoConsultation, true))
+          : baseCondition;
+
       appointmentsList = await db.query.appointments.findMany({
-        where: or(
-          // Appointments assigned to this doctor (any status)
-          eq(appointments.doctorId, userId),
-          // Appointments this doctor has handled (approved, declined, cancelled, rescheduled)
-          eq(appointments.approvedBy, userId),
-          eq(appointments.declinedBy, userId),
-          eq(appointments.cancelledBy, userId),
-          eq(appointments.rescheduledBy, userId),
-        ),
+        where: whereClause,
         with: {
           patient: {
             with: {
@@ -80,8 +160,17 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ appointments: [] });
       }
 
+      // Apply video consultation filter if requested
+      const whereClause =
+        type === "video"
+          ? and(
+              eq(appointments.patientId, patientProfile.id),
+              eq(appointments.isVideoConsultation, true),
+            )
+          : eq(appointments.patientId, patientProfile.id);
+
       appointmentsList = await db.query.appointments.findMany({
-        where: eq(appointments.patientId, patientProfile.id),
+        where: whereClause,
         with: {
           patient: {
             with: {
@@ -104,8 +193,11 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const enrichedAppointments =
+      await enrichAppointmentsWithDoctorPaymentDetails(appointmentsList);
+
     return NextResponse.json(
-      { appointments: appointmentsList },
+      { appointments: enrichedAppointments },
       {
         headers: {
           "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
@@ -150,10 +242,11 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { appointmentDate, appointmentTime, symptoms, notes, doctorId } =
+    const { appointmentDate, appointmentTime, symptoms, notes, doctorId, isVideoConsultation } =
       body;
 
     // Validate doctorId if provided
+    let doctorProfile = null;
     if (doctorId) {
       const doctor = await db.query.users.findFirst({
         where: and(eq(users.id, doctorId), eq(users.role, "DOCTOR")),
@@ -165,6 +258,34 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         );
       }
+
+      // Get doctor profile for consultation fee and UPI details (needed for video consultation)
+      if (isVideoConsultation) {
+        doctorProfile = await db.query.doctorProfiles.findFirst({
+          where: eq(doctorProfiles.userId, doctorId),
+        });
+
+        if (!doctorProfile) {
+          return NextResponse.json(
+            { error: "Doctor profile not found" },
+            { status: 404 },
+          );
+        }
+
+        // Verify doctor has UPI ID configured for video consultation payments
+        if (!doctorProfile.upiId) {
+          return NextResponse.json(
+            { error: "Doctor payment details not configured. Please select a different doctor." },
+            { status: 400 },
+          );
+        }
+      }
+    } else if (isVideoConsultation) {
+      // Video consultation requires a specific doctor to be selected
+      return NextResponse.json(
+        { error: "Please select a doctor for video consultation" },
+        { status: 400 },
+      );
     }
 
     // Get patient profile
@@ -236,6 +357,15 @@ export async function POST(req: NextRequest) {
         notes,
         status: "PENDING",
         paymentStatus: "PENDING",
+        // Video consultation fields
+        isVideoConsultation: isVideoConsultation || false,
+        videoConsultationFee: null,
+        depositAmount: null,
+        depositPaid: false,
+        depositCancellationScheduledAt: null,
+        remainingAmount: null,
+        remainingPaid: false,
+        prescriptionWithheld: isVideoConsultation || false,
       })
       .returning();
 

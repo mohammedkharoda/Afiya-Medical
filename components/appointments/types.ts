@@ -1,4 +1,5 @@
 export interface Appointment {
+  remainingPaymentScreenshot: string | null | undefined;
   id: string;
   appointmentDate: string;
   appointmentTime: string;
@@ -8,6 +9,26 @@ export interface Appointment {
   originalAppointmentDate?: string;
   originalAppointmentTime?: string;
   rescheduledAt?: string;
+  // Video consultation fields
+  isVideoConsultation?: boolean;
+  videoConsultationFee?: number | null;
+  depositAmount?: number | null;
+  depositPaid?: boolean;
+  depositConfirmedAt?: string | null;
+  depositVerifiedAt?: string | null;
+  depositPaymentScreenshot?: string | null;
+  videoMeetingUrl?: string | null;
+  videoMeetingId?: string | null;
+  videoMeetingPassword?: string | null;
+  remainingAmount?: number | null;
+  remainingPaid?: boolean;
+  remainingConfirmedAt?: string | null;
+  remainingVerifiedAt?: string | null;
+  prescriptionWithheld?: boolean;
+  doctorId?: string;
+  doctorName?: string | null;
+  doctorUpiId?: string | null;
+  doctorUpiQrCode?: string | null;
   patient?: {
     id?: string;
     address?: string;
@@ -64,5 +85,6 @@ export interface DoctorProfile {
   degrees: string[];
   experience: number | null;
   upiId: string;
+  upiQrCode?: string | null;
   clinicAddress: string | null;
 }

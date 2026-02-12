@@ -11,6 +11,7 @@ interface AppointmentCardProps {
   isDoctor: boolean;
   actionLoading: { id: string; action: string } | null;
   onApprove: (appointmentId: string) => void;
+  onApproveVideo: (appointment: Appointment) => void;
   onDecline: (appointment: Appointment) => void;
   onStartPrescription: (appointment: Appointment) => void;
   onReschedule: (appointment: Appointment) => void;
@@ -25,6 +26,7 @@ export function AppointmentCard({
   isDoctor,
   actionLoading,
   onApprove,
+  onApproveVideo,
   onDecline,
   onStartPrescription,
   onReschedule,
@@ -34,7 +36,7 @@ export function AppointmentCard({
   onRecordPayment,
 }: AppointmentCardProps) {
   return (
-    <div className="rounded-lg border border-border p-3 sm:p-4 space-y-3">
+    <div className="space-y-3 rounded-xl border border-border/70 bg-card p-4 shadow-sm sm:space-y-4 sm:p-5">
       {/* Header Row */}
       <AppointmentHeader
         appointmentDate={appointment.appointmentDate}
@@ -56,6 +58,7 @@ export function AppointmentCard({
           appointment={appointment}
           actionLoading={actionLoading}
           onApprove={onApprove}
+          onApproveVideo={onApproveVideo}
           onDecline={onDecline}
           onStartPrescription={onStartPrescription}
           onReschedule={onReschedule}
@@ -74,6 +77,9 @@ export function AppointmentCard({
           actionLoading={actionLoading}
           onCancel={onCancelPatient}
           onViewDetails={onViewDetails}
+          doctorName={appointment.doctorName || "Doctor"}
+          doctorUpiId={appointment.doctorUpiId || ""}
+          doctorUpiQrCode={appointment.doctorUpiQrCode}
         />
       )}
     </div>

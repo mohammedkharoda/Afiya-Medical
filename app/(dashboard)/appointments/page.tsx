@@ -7,6 +7,7 @@ import { PaymentDialog } from "@/components/appointments/dialogs/PaymentDialog";
 import { PrescriptionDialog } from "@/components/appointments/dialogs/PrescriptionDialog";
 import { RescheduleDialog } from "@/components/appointments/dialogs/RescheduleDialog";
 import { ViewPrescriptionDialog } from "@/components/appointments/dialogs/ViewPrescriptionDialog";
+import { ApproveVideoConsultationDialog } from "@/components/appointments/dialogs/ApproveVideoConsultationDialog";
 import { AppointmentCard } from "@/components/appointments/AppointmentCard";
 import { PageHeader } from "@/components/appointments/PageHeader";
 import { formatInputDate, parseLocalDate } from "@/components/appointments/utils";
@@ -141,6 +142,7 @@ export default function AppointmentsPage() {
                 isDoctor={isDoctor}
                 actionLoading={appointmentActions.actionLoading}
                 onApprove={appointmentActions.handleApprove}
+                onApproveVideo={appointmentActions.handleApproveVideo}
                 onDecline={(appointment) => {
                   dialogState.setSelectedAppointment(appointment);
                   dialogState.setDialogType("decline");
@@ -326,6 +328,19 @@ export default function AppointmentsPage() {
         }}
         selectedAppointment={dialogState.selectedAppointment}
         onClose={dialogState.closeViewPrescriptionDialog}
+      />
+
+      <ApproveVideoConsultationDialog
+        open={dialogState.dialogType === "approve_video"}
+        onOpenChange={(open) => {
+          if (!open) dialogState.closeApproveVideoDialog();
+        }}
+        selectedAppointment={dialogState.selectedAppointment}
+        feeAmount={dialogState.videoConsultationFee}
+        onFeeAmountChange={dialogState.setVideoConsultationFee}
+        actionLoading={appointmentActions.actionLoading}
+        onCancel={dialogState.closeApproveVideoDialog}
+        onConfirm={appointmentActions.handleConfirmVideoApproval}
       />
     </div>
   );

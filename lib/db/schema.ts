@@ -142,6 +142,7 @@ export const doctorProfiles = pgTable(
     speciality: text("speciality").notNull(), // e.g., "General Physician", "Cardiologist"
     degrees: text("degrees").array().default([]).notNull(), // e.g., ["MBBS", "MD"]
     experience: integer("experience"), // years of experience
+    consultationFee: doublePrecision("consultationFee").default(500).notNull(), // Default consultation fee in INR
     upiId: text("upiId").notNull(), // Required for receiving payments, e.g., "doctor@upi"
     upiQrCode: text("upiQrCode"), // Cloudinary URL for QR code image
     clinicAddress: text("clinicAddress"), // Clinic address for patient emails
@@ -256,6 +257,28 @@ export const appointments = pgTable("appointments", {
   // Prescription sent tracking
   prescriptionSent: boolean("prescriptionSent").default(false).notNull(),
   prescriptionSentAt: timestamp("prescriptionSentAt"),
+  // Video consultation fields
+  isVideoConsultation: boolean("isVideoConsultation").default(false).notNull(),
+  videoConsultationFee: doublePrecision("videoConsultationFee"),
+  // Deposit payment tracking (50% upfront)
+  depositAmount: doublePrecision("depositAmount"),
+  depositPaid: boolean("depositPaid").default(false).notNull(),
+  depositConfirmedAt: timestamp("depositConfirmedAt"), // When patient confirms payment
+  depositVerifiedAt: timestamp("depositVerifiedAt"), // When doctor verifies payment
+  depositPaymentScreenshot: text("depositPaymentScreenshot"), // Cloudinary URL
+  depositCancellationScheduledAt: timestamp("depositCancellationScheduledAt"), // Auto-cancel time if not verified
+  // Video meeting details (Zoom/Google Meet)
+  videoMeetingUrl: text("videoMeetingUrl"), // Direct join link
+  videoMeetingId: text("videoMeetingId"), // Meeting ID
+  videoMeetingPassword: text("videoMeetingPassword"), // Meeting password (if any)
+  videoMeetingCreatedAt: timestamp("videoMeetingCreatedAt"),
+  // Remaining payment tracking (50% after consultation)
+  remainingAmount: doublePrecision("remainingAmount"),
+  remainingPaid: boolean("remainingPaid").default(false).notNull(),
+  remainingConfirmedAt: timestamp("remainingConfirmedAt"), // When patient confirms payment
+  remainingVerifiedAt: timestamp("remainingVerifiedAt"), // When doctor verifies payment
+  remainingPaymentScreenshot: text("remainingPaymentScreenshot"), // Cloudinary URL
+  prescriptionWithheld: boolean("prescriptionWithheld").default(false).notNull(), // True until remaining payment verified
   // Approval tracking
   approvedAt: timestamp("approvedAt"),
   approvedBy: text("approvedBy"), // userId who approved
@@ -366,6 +389,9 @@ export const payments = pgTable(
     paidAt: timestamp("paidAt"),
     notes: text("notes"),
     paymentScreenshot: text("paymentScreenshot"),
+    // Manual verification by doctor (for UPI payments)
+    verifiedByDoctor: boolean("verifiedByDoctor").default(false).notNull(),
+    verifiedAt: timestamp("verifiedAt"),
     createdAt: timestamp("createdAt")
       .$defaultFn(() => new Date())
       .notNull(),

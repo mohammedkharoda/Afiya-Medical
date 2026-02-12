@@ -30,6 +30,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { VideoConsultationToggle } from "@/components/appointments/VideoConsultationToggle";
 
 type UserRole = "PATIENT" | "DOCTOR" | "ADMIN";
 
@@ -44,6 +45,9 @@ interface PreferredDoctor {
   id: string;
   name: string;
   speciality: string;
+  consultationFee?: number;
+  upiId?: string;
+  upiQrCode?: string | null;
 }
 
 function AppointmentBookingContent() {
@@ -64,6 +68,7 @@ function AppointmentBookingContent() {
   const [notes, setNotes] = useState<string>("");
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [isVideoConsultation, setIsVideoConsultation] = useState(false);
 
   // Check if form is ready to submit
   const canSubmit =
@@ -191,6 +196,7 @@ function AppointmentBookingContent() {
           symptoms,
           notes,
           doctorId: preferredDoctor.id,
+          isVideoConsultation,
         }),
         credentials: "include",
       });
@@ -201,7 +207,11 @@ function AppointmentBookingContent() {
         return;
       }
 
-      toast.success("Appointment booked successfully");
+      toast.success(
+        isVideoConsultation
+          ? "Appointment booked. Doctor will confirm and share the payable amount."
+          : "Appointment booked successfully",
+      );
       router.push("/appointments");
     } catch {
       toast.error("An unexpected error occurred");
@@ -297,6 +307,14 @@ function AppointmentBookingContent() {
                 </div>
               )}
             </div>
+
+            {/* Video Consultation Toggle */}
+            {preferredDoctor && (
+              <VideoConsultationToggle
+                enabled={isVideoConsultation}
+                onChange={setIsVideoConsultation}
+              />
+            )}
 
             <div className="grid gap-6 md:grid-cols-2">
               {/* Date Picker Section */}
@@ -439,6 +457,7 @@ function AppointmentBookingContent() {
           </form>
         </CardContent>
       </Card>
+
     </div>
   );
 }
