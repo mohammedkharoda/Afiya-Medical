@@ -88,6 +88,9 @@ export async function GET(req: NextRequest) {
     let remindersSent = 0;
     const errors: string[] = [];
 
+    // Helper function to add delay between emails (rate limiting)
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
     for (const appointment of scheduledAppointments) {
       try {
         // Convert appointment time to minutes from midnight
@@ -148,6 +151,10 @@ export async function GET(req: NextRequest) {
             console.log(
               `[Reminder CRON] Reminder sent for appointment ${appointment.id} to ${patientProfile.user.email}`,
             );
+
+            // Add 600ms delay between emails to respect Resend rate limits
+            // This allows ~1.5 emails/second, safely under the 2/sec limit
+            await delay(600);
           } else {
             errors.push(
               `Failed to send email for appointment ${appointment.id}`,
@@ -160,6 +167,9 @@ export async function GET(req: NextRequest) {
           error,
         );
         errors.push(`Error for appointment ${appointment.id}: ${error}`);
+
+        // Add delay even on error to prevent rapid retry hammering
+        await delay(600);
       }
     }
 
