@@ -4,27 +4,36 @@ import type { NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Public routes (no session required) - "/" is NOT public, it redirects based on auth
-  // Deploy version
-  const publicRoutes = [
-    "/login",
-    "/register",
-    "/register/doctor",
-    "/verify-email",
-    "/verify-otp",
-    "/admin/login",
-    "/forgot-password",
-    "/reset-password",
+  // Protect only real app routes so unknown URLs can fall through to Next's
+  // not-found page instead of being redirected to login.
+  const protectedExactRoutes = new Set([
+    "/dashboard",
+    "/medical-history",
+    "/notification-settings",
+    "/payments",
+    "/prescriptions",
+    "/profile",
+    "/schedule",
+    "/video-consultations",
+    "/admin/invitations",
+    "/doctor/appointments-summary",
+    "/doctor/revenue",
+    "/doctor/schedule",
+  ]);
+  const protectedRoutePrefixes = [
+    "/appointments/",
+    "/patients/",
   ];
-  const isPublicRoute = publicRoutes.some(
-    (route) =>
-      pathname === route ||
-      pathname.startsWith(route + "/") ||
-      pathname.startsWith(route + "?"),
-  );
+  const isProtectedRoute =
+    protectedExactRoutes.has(pathname) ||
+    protectedRoutePrefixes.some((prefix) => pathname.startsWith(prefix));
 
-  // Allow API routes and static files
-  if (pathname.startsWith("/api") || pathname.startsWith("/_next")) {
+  // Allow API routes and any static asset request from /public.
+  if (
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/_next") ||
+    /\.[a-zA-Z0-9]+$/.test(pathname)
+  ) {
     return NextResponse.next();
   }
 
@@ -44,17 +53,18 @@ export async function middleware(request: NextRequest) {
     return response;
   };
 
-  // Root path "/" - redirect to dashboard if authenticated, otherwise to login
+  // Root path "/" - show marketing for visitors and send authenticated users
+  // straight into the product experience.
   if (pathname === "/") {
     if (sessionToken) {
       return createRedirect("/dashboard");
-    } else {
-      return createRedirect("/login");
     }
+
+    return NextResponse.next();
   }
 
   // If not authenticated and trying to access protected route
-  if (!sessionToken && !isPublicRoute) {
+  if (!sessionToken && isProtectedRoute) {
     return createRedirect("/login");
   }
 
@@ -69,7 +79,7 @@ export async function middleware(request: NextRequest) {
 
   // Add no-cache headers to protected pages
   const response = NextResponse.next();
-  if (!isPublicRoute) {
+  if (isProtectedRoute) {
     response.headers.set(
       "Cache-Control",
       "no-store, no-cache, must-revalidate, proxy-revalidate",
@@ -82,5 +92,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|public).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };

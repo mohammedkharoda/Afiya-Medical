@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -22,16 +22,17 @@ import { toast } from "sonner";
 import { Mail, Lock, AlertTriangle, Eye, EyeOff } from "lucide-react";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [sessionExpired, setSessionExpired] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(
+    () => searchParams.get("expired") === "true",
+  );
   const [showPassword, setShowPassword] = useState(false);
+  const expiredFromQuery = searchParams.get("expired") === "true";
 
   // Check if redirected due to session expiry
   useEffect(() => {
-    if (searchParams.get("expired") === "true") {
-      setSessionExpired(true);
+    if (expiredFromQuery) {
       // Clear the expired parameter from URL to prevent showing on refresh
       const url = new URL(window.location.href);
       url.searchParams.delete("expired");
@@ -44,7 +45,7 @@ function LoginForm() {
 
       return () => clearTimeout(timer);
     }
-  }, [searchParams]);
+  }, [expiredFromQuery]);
 
   const {
     register,
@@ -113,7 +114,7 @@ function LoginForm() {
           const hasHistory = mhJson?.medicalHistory;
           if (!hasHistory) {
             // Use window.location for hard navigation to ensure middleware runs
-            window.location.href = "/medical-history/new";
+            window.location.assign("/medical-history/new");
             return;
           }
         } catch {
@@ -122,7 +123,7 @@ function LoginForm() {
       }
 
       // Use window.location for hard navigation to ensure middleware runs with new session
-      window.location.href = "/dashboard";
+      window.location.assign("/dashboard");
     } catch (error) {
       console.error("Login error:", error);
       toast.error("Network error", {
@@ -137,7 +138,7 @@ function LoginForm() {
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <Image
-            src="https://res.cloudinary.com/dg2ezgumd/image/upload/v1769090131/logos_f96i4b.png"
+            src="/logos.png"
             alt="Afiya Logo"
             width={64}
             height={64}

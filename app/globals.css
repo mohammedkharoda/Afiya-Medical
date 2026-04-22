@@ -2,35 +2,33 @@
 
 @layer base {
   :root {
-    /* ===== Afiya Wellness Light Theme ===== */
-
-    --background: 40 33% 96%; /* Warm Ivory */
-    --foreground: 0 0% 18%; /* Charcoal */
+    --background: 42 35% 95%;
+    --foreground: 170 12% 17%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 18%;
+    --card-foreground: 170 12% 17%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 18%;
+    --popover-foreground: 170 12% 17%;
 
-    --primary: 186 41% 32%; /* Deep Teal */
+    --primary: 179 37% 33%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 247 33% 83%; /* Soft Lavender */
-    --secondary-foreground: 0 0% 18%;
+    --secondary: 154 23% 86%;
+    --secondary-foreground: 170 12% 17%;
 
-    --accent: 43 47% 57%; /* Brushed Gold */
-    --accent-foreground: 0 0% 18%;
+    --accent: 36 46% 61%;
+    --accent-foreground: 170 12% 17%;
 
-    --muted: 210 20% 94%;
-    --muted-foreground: 0 0% 48%;
+    --muted: 44 20% 91%;
+    --muted-foreground: 168 10% 41%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 16% 90%;
-    --input: 210 16% 90%;
-    --ring: 186 41% 32%;
+    --border: 40 20% 84%;
+    --input: 40 20% 84%;
+    --ring: 179 37% 33%;
 
     --radius: 1rem;
   }
@@ -38,14 +36,56 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: var(--font-gt-walsheim), system-ui, sans-serif;
+    font-family: var(--font-mluvka), system-ui, sans-serif;
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(61, 122, 122, 0.12), transparent 28%),
+      radial-gradient(circle at 82% 14%, rgba(249, 177, 134, 0.14), transparent 24%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(245, 239, 228, 0.92)),
+      repeating-linear-gradient(
+        0deg,
+        rgba(61, 122, 122, 0.02) 0,
+        rgba(61, 122, 122, 0.02) 1px,
+        transparent 1px,
+        transparent 30px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        rgba(61, 122, 122, 0.018) 0,
+        rgba(61, 122, 122, 0.018) 1px,
+        transparent 1px,
+        transparent 30px
+      );
+    background-attachment: fixed;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+  }
+
+  a[href],
+  button:not(:disabled),
+  [role="button"] {
+    cursor: pointer;
   }
 
   h1,
   h2,
   h3,
   h4 {
-    font-family: var(--font-gt-walsheim), system-ui, sans-serif;
+    font-family: var(--font-mluvka), system-ui, sans-serif;
     font-weight: 700;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

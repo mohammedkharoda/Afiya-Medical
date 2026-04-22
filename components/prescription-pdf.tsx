@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Image,
 } from "@react-pdf/renderer";
+import { APP_LOGO_URL } from "@/lib/logo";
 
 // Afiya branding colors
 const colors = {
@@ -183,7 +184,8 @@ export const PrescriptionPDF = ({ prescription }: PrescriptionPDFProps) => (
       <View style={styles.header}>
         <Image
           style={styles.logo}
-          src="https://res.cloudinary.com/dg2ezgumd/image/upload/v1769090131/logos_f96i4b.png"
+          src={APP_LOGO_URL}
+          alt="Afiya logo"
         />
         <Text style={styles.clinicName}>Afiya Medical Clinic</Text>
         <Text style={styles.subtitle}>Medical Prescription</Text>

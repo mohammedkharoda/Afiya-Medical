@@ -9,19 +9,30 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+type NavigatorWithStandalone = Navigator & {
+  standalone?: boolean;
+};
+
+function checkInstalled() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as NavigatorWithStandalone).standalone === true
+  );
+}
+
 export function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(checkInstalled);
 
   useEffect(() => {
     // Check if already installed
-    if (
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone === true
-    ) {
-      setIsInstalled(true);
+    if (checkInstalled()) {
       return;
     }
 
@@ -85,7 +96,8 @@ export function PwaInstallPrompt() {
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 animate-in slide-in-from-bottom-5 md:left-auto md:max-w-md">
-      <div className="rounded-lg border border-primary/20 bg-card p-4 shadow-lg">
+      <div className="relative rounded-2xl border border-primary/15 bg-[rgba(255,250,241,0.86)] p-4 shadow-[0_24px_60px_-28px_rgba(17,24,39,0.42)] backdrop-blur-xl">
+        <div className="pointer-events-none absolute inset-x-10 top-2 h-14 rounded-full bg-primary/10 blur-3xl" />
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
             <Download className="h-5 w-5 text-primary" />

@@ -1,4 +1,5 @@
 // Pusher Beams server-side push notification sender
+import { APP_LOGO_URL } from "@/lib/logo";
 
 const BEAMS_INSTANCE_ID = process.env.PUSHER_BEAMS_INSTANCE_ID || "";
 const BEAMS_SECRET_KEY = process.env.PUSHER_BEAMS_SECRET_KEY || "";
@@ -76,7 +77,7 @@ export async function sendPushToUser(
     {
       title,
       body,
-      icon: "https://res.cloudinary.com/dg2ezgumd/image/upload/v1769090131/logos_f96i4b.png",
+      icon: APP_LOGO_URL,
       deep_link: deepLink,
       hide_notification_if_site_has_focus: true,
     },
@@ -144,7 +145,7 @@ export async function sendNewAppointmentAlertPush(
     {
       title: "New Appointment Booked 📅",
       body: `${patientName} booked an appointment for ${appointmentDate} at ${appointmentTime}`,
-      icon: "https://res.cloudinary.com/dg2ezgumd/image/upload/v1769090131/logos_f96i4b.png",
+      icon: APP_LOGO_URL,
       deep_link: "/appointments",
     },
     { type: "NEW_APPOINTMENT" },
@@ -161,7 +162,7 @@ export async function sendGeneralPush(
   return publishToInterests(interests, {
     title,
     body,
-    icon: "https://res.cloudinary.com/dg2ezgumd/image/upload/v1769090131/logos_f96i4b.png",
+    icon: APP_LOGO_URL,
     deep_link: deepLink,
   });
 }

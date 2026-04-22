@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { healthFacts } from "@/lib/health-facts";
 import { Button } from "@/components/ui/button";
@@ -18,14 +18,13 @@ export function LoadingOverlay({ isLoading }: LoadingOverlayProps) {
   const [currentFactIndex, setCurrentFactIndex] = useState(() =>
     Math.floor(Math.random() * healthFacts.length)
   );
-  const [showTimeout, setShowTimeout] = useState(false);
+  const [timeoutElapsed, setTimeoutElapsed] = useState(false);
   const [factFade, setFactFade] = useState(true);
-  const [mounted, setMounted] = useState(false);
-
-  // Set mounted flag on client-side only to avoid hydration mismatch
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   // Rotate health facts every 4 seconds
   useEffect(() => {
@@ -49,9 +48,8 @@ export function LoadingOverlay({ isLoading }: LoadingOverlayProps) {
   useEffect(() => {
     if (!isLoading) return;
 
-    setShowTimeout(false); // Reset on mount/remount
     const timer = setTimeout(() => {
-      setShowTimeout(true);
+      setTimeoutElapsed(true);
     }, 10000);
 
     return () => clearTimeout(timer);
@@ -76,7 +74,7 @@ export function LoadingOverlay({ isLoading }: LoadingOverlayProps) {
         {/* Pulsing Logo - No shadow */}
         <div className="relative">
           <Image
-            src="https://res.cloudinary.com/dg2ezgumd/image/upload/v1769090131/logos_f96i4b.png"
+            src="/logos.png"
             alt="Afiya Logo"
             width={80}
             height={80}
@@ -97,7 +95,7 @@ export function LoadingOverlay({ isLoading }: LoadingOverlayProps) {
         )}
 
         {/* Timeout Message and Retry Button */}
-        {showTimeout && (
+        {timeoutElapsed && (
           <div className="flex flex-col items-center gap-3 mt-4">
             <p className="text-sm text-muted-foreground">
               This is taking longer than expected...

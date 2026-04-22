@@ -32,7 +32,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { toast } from "sonner";
 import Image from "next/image";
 import { PusherBeamsProvider } from "@/components/pusher-beams-provider";
 import { useLoadingStore } from "@/stores/loading-store";
@@ -232,7 +231,7 @@ export default function DashboardLayout({
 
     try {
       // Use our custom logout API that properly clears server-side cookies
-      const response = await fetch("/api/auth/logout", {
+      await fetch("/api/auth/logout", {
         method: "POST",
         credentials: "include",
       });
@@ -291,7 +290,7 @@ export default function DashboardLayout({
               className="flex flex-col items-center gap-1 cursor-pointer"
             >
               <Image
-                src="https://res.cloudinary.com/dg2ezgumd/image/upload/v1769090131/logos_f96i4b.png"
+                src="/logos.png"
                 alt="Afiya Logo"
                 width={44}
                 height={44}

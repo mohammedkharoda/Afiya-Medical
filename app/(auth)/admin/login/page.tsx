@@ -139,7 +139,7 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <Image
-            src="https://res.cloudinary.com/dg2ezgumd/image/upload/v1769090131/logos_f96i4b.png"
+            src="/logos.png"
             alt="Afiya Logo"
             width={64}
             height={64}
