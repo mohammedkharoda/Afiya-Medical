@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, users, doctorProfiles } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { db, users, doctorProfiles, doctorVerifications } from "@/lib/db";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { GoogleGenAI, Type } from "@google/genai";
 
 // Keyword-based specialty detection (reliable fallback)
@@ -331,7 +331,17 @@ export async function POST(req: NextRequest) {
       })
       .from(users)
       .innerJoin(doctorProfiles, eq(users.id, doctorProfiles.userId))
-      .where(eq(users.role, "DOCTOR"));
+      .leftJoin(doctorVerifications, eq(doctorVerifications.userId, users.id))
+      .where(
+        and(
+          eq(users.role, "DOCTOR"),
+          eq(users.isVerified, true),
+          or(
+            isNull(doctorVerifications.id),
+            eq(doctorVerifications.status, "APPROVED"),
+          ),
+        ),
+      );
 
     if (doctors.length === 0) {
       return NextResponse.json({

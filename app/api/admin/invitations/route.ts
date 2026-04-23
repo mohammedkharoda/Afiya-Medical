@@ -5,6 +5,7 @@ import { db, users, doctorInvitations } from "@/lib/db";
 import { eq, desc } from "drizzle-orm";
 import { doctorInvitationSchema } from "@/lib/validations/auth";
 import { sendDoctorInvitationEmail } from "@/lib/email";
+import { getAppBaseUrl } from "@/lib/app-url";
 
 const INVITATION_EXPIRY_DAYS = 7;
 
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest) {
       .returning();
 
     // Build signup URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const baseUrl = getAppBaseUrl(req);
     const signupUrl = `${baseUrl}/register/doctor?token=${token}`;
 
     // Send invitation email
@@ -237,8 +238,7 @@ export async function PATCH(req: NextRequest) {
         .where(eq(doctorInvitations.id, invitationId));
 
       // Build signup URL
-      const baseUrl =
-        process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const baseUrl = getAppBaseUrl(req);
       const signupUrl = `${baseUrl}/register/doctor?token=${newToken}`;
 
       // Send new invitation email

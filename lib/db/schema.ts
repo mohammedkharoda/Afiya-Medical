@@ -43,6 +43,10 @@ export const invitationStatusEnum = pgEnum("InvitationStatus", [
   "EXPIRED",
   "REVOKED",
 ]);
+export const doctorVerificationStatusEnum = pgEnum(
+  "DoctorVerificationStatus",
+  ["PENDING", "APPROVED", "REJECTED"],
+);
 
 // Tables
 export const users = pgTable(
@@ -424,11 +428,61 @@ export const doctorInvitations = pgTable(
   (table) => [uniqueIndex("doctor_invitations_token_idx").on(table.token)],
 );
 
+export const doctorVerifications = pgTable(
+  "doctor_verifications",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    invitationId: text("invitationId").references(() => doctorInvitations.id, {
+      onDelete: "set null",
+    }),
+    registrationNumber: text("registrationNumber").notNull(),
+    registrationCertificateUrl: text("registrationCertificateUrl").notNull(),
+    registrationCertificateName: text("registrationCertificateName").notNull(),
+    aadhaarCardUrl: text("aadhaarCardUrl").notNull(),
+    aadhaarCardName: text("aadhaarCardName").notNull(),
+    panCardUrl: text("panCardUrl").notNull(),
+    panCardName: text("panCardName").notNull(),
+    status: doctorVerificationStatusEnum("status")
+      .default("PENDING")
+      .notNull(),
+    reviewNotes: text("reviewNotes"),
+    reviewedBy: text("reviewedBy").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    reviewedAt: timestamp("reviewedAt"),
+    submittedAt: timestamp("submittedAt")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    createdAt: timestamp("createdAt")
+      .$defaultFn(() => new Date())
+      .notNull(),
+    updatedAt: timestamp("updatedAt")
+      .$defaultFn(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("doctor_verifications_user_id_idx").on(table.userId),
+  ],
+);
+
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
+  doctorProfile: one(doctorProfiles, {
+    fields: [users.id],
+    references: [doctorProfiles.userId],
+  }),
   patientProfile: one(patientProfiles, {
     fields: [users.id],
     references: [patientProfiles.userId],
+  }),
+  doctorVerification: one(doctorVerifications, {
+    fields: [users.id],
+    references: [doctorVerifications.userId],
   }),
   sessions: many(sessions),
   accounts: many(accounts),
@@ -453,7 +507,29 @@ export const doctorProfilesRelations = relations(doctorProfiles, ({ one }) => ({
     fields: [doctorProfiles.userId],
     references: [users.id],
   }),
+  verification: one(doctorVerifications, {
+    fields: [doctorProfiles.userId],
+    references: [doctorVerifications.userId],
+  }),
 }));
+
+export const doctorVerificationsRelations = relations(
+  doctorVerifications,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [doctorVerifications.userId],
+      references: [users.id],
+    }),
+    invitation: one(doctorInvitations, {
+      fields: [doctorVerifications.invitationId],
+      references: [doctorInvitations.id],
+    }),
+    reviewer: one(users, {
+      fields: [doctorVerifications.reviewedBy],
+      references: [users.id],
+    }),
+  }),
+);
 
 export const patientProfilesRelations = relations(
   patientProfiles,
@@ -553,3 +629,5 @@ export type Payment = typeof payments.$inferSelect;
 export type NewPayment = typeof payments.$inferInsert;
 export type DoctorInvitation = typeof doctorInvitations.$inferSelect;
 export type NewDoctorInvitation = typeof doctorInvitations.$inferInsert;
+export type DoctorVerification = typeof doctorVerifications.$inferSelect;
+export type NewDoctorVerification = typeof doctorVerifications.$inferInsert;

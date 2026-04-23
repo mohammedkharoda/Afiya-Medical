@@ -267,7 +267,20 @@ export const doctorRegisterSchema = z.object({
   degrees: z.array(z.string()).min(1, "At least one degree is required"),
   experience: z.number().min(0).optional(),
   upiId: z.string().min(1, "UPI ID is required for receiving payments"),
-  clinicAddress: z.string().min(5, "Clinic address is required").optional(),
+  clinicAddress: z.string().min(5, "Clinic address is required"),
+  registrationNumber: z
+    .string()
+    .min(5, "Medical registration number is required"),
+  registrationCertificateUrl: z
+    .string()
+    .min(1, "Registration certificate upload is required"),
+  registrationCertificateName: z
+    .string()
+    .min(1, "Registration certificate file name is required"),
+  aadhaarCardUrl: z.string().min(1, "Aadhaar card upload is required"),
+  aadhaarCardName: z.string().min(1, "Aadhaar card file name is required"),
+  panCardUrl: z.string().min(1, "PAN card upload is required"),
+  panCardName: z.string().min(1, "PAN card file name is required"),
 });
 
 // Admin login schema (OTP-based)

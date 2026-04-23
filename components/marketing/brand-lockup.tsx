@@ -18,14 +18,14 @@ export function BrandLockup({
       <div
         className={cn(
           "relative overflow-hidden rounded-[1.15rem] bg-white",
-          compact ? "h-11 w-11" : "h-14 w-14",
+          compact ? "h-12 w-12" : "h-16 w-16",
         )}
       >
         <Image
           src={MARKETING_LOGO_URL}
           alt="Afiya logo"
           fill
-          sizes={compact ? "44px" : "56px"}
+          sizes={compact ? "48px" : "64px"}
           className="object-cover object-top scale-[1.06]"
           priority
         />
@@ -35,7 +35,7 @@ export function BrandLockup({
         <p
           className={cn(
             "font-semibold lowercase tracking-[-0.06em] text-foreground",
-            compact ? "text-[1.9rem]" : "text-[2.25rem]",
+            compact ? "text-[2.05rem]" : "text-[2.45rem]",
           )}
         >
           afiya

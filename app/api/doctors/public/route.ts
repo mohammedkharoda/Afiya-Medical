@@ -1,9 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
-import { db, users, doctorProfiles, doctorSchedule } from "@/lib/db";
-import { eq, and, gte } from "drizzle-orm";
+import { NextResponse } from "next/server";
+import {
+  db,
+  users,
+  doctorProfiles,
+  doctorSchedule,
+  doctorVerifications,
+} from "@/lib/db";
+import { eq, and, gte, isNull, or } from "drizzle-orm";
 
 // Public endpoint to fetch doctors list (for registration page)
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     // Get all doctors with their profiles (public info only)
     const doctors = await db
@@ -17,7 +23,17 @@ export async function GET(req: NextRequest) {
       })
       .from(users)
       .innerJoin(doctorProfiles, eq(users.id, doctorProfiles.userId))
-      .where(eq(users.role, "DOCTOR"));
+      .leftJoin(doctorVerifications, eq(doctorVerifications.userId, users.id))
+      .where(
+        and(
+          eq(users.role, "DOCTOR"),
+          eq(users.isVerified, true),
+          or(
+            isNull(doctorVerifications.id),
+            eq(doctorVerifications.status, "APPROVED"),
+          ),
+        ),
+      );
 
     // Get today's date for checking availability
     const today = new Date();

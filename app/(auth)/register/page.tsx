@@ -46,6 +46,7 @@ import {
   ChevronRight,
   AlertCircle,
   FlaskConical,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Select,
@@ -79,6 +80,11 @@ export default function RegisterPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [accountType, setAccountType] = useState<"PATIENT" | "DOCTOR">(
+    "PATIENT",
+  );
+  const [doctorInviteEmail, setDoctorInviteEmail] = useState("");
+  const [doctorInviteLoading, setDoctorInviteLoading] = useState(false);
   const [dobDate, setDobDate] = useState<Date | undefined>(undefined);
   const [dobOpen, setDobOpen] = useState(false);
   const [captchaToken, setCaptchaToken] = useState("");
@@ -282,9 +288,51 @@ export default function RegisterPage() {
     }
   };
 
+  const requestDoctorRegistrationLink = async () => {
+    const email = doctorInviteEmail.trim();
+
+    if (!email) {
+      toast.error("Enter your email address to receive the registration link");
+      return;
+    }
+
+    setDoctorInviteLoading(true);
+
+    try {
+      const response = await fetch("/api/doctor-invitations/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        toast.error(result.error || "Could not send the doctor registration link");
+        return;
+      }
+
+      toast.success(
+        result.message ||
+          "We sent your doctor registration link. Please check your email.",
+      );
+    } catch {
+      toast.error("Could not send the doctor registration link");
+    } finally {
+      setDoctorInviteLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-lg">
+      <div
+        className={cn(
+          "w-full transition-all duration-300",
+          accountType === "DOCTOR" ? "max-w-5xl" : "max-w-lg",
+        )}
+      >
         <div className="flex flex-col items-center mb-8">
           <Image
             src="/logos.png"
@@ -296,12 +344,208 @@ export default function RegisterPage() {
         <Card className="border-border shadow-xl">
           <CardHeader className="space-y-2 pb-6">
             <CardTitle className="text-3xl font-heading text-foreground">
-              Create an account
+              Create your account
             </CardTitle>
             <CardDescription className="text-muted-foreground text-base">
-              Enter your information to create your account
+              {accountType === "PATIENT"
+                ? "Enter your information to create your account"
+                : "Enter your email to receive the doctor registration link and upload your documents for admin review"}
             </CardDescription>
           </CardHeader>
+          <div className="px-6">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setAccountType("PATIENT")}
+                className={cn(
+                  "rounded-2xl border bg-[#fbf6ee] px-4 py-4 text-left transition-all",
+                  accountType === "PATIENT"
+                    ? "border-black bg-white shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)]"
+                    : "border-black/20 hover:border-black/65 hover:bg-white",
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <User className="h-5 w-5 text-primary" />
+                  <span className="font-semibold text-foreground">Patient</span>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Book appointments, manage records, and choose your preferred
+                  doctor.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAccountType("DOCTOR")}
+                className={cn(
+                  "rounded-2xl border bg-[#fbf6ee] px-4 py-4 text-left transition-all",
+                  accountType === "DOCTOR"
+                    ? "border-black bg-white shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)]"
+                    : "border-black/20 hover:border-black/65 hover:bg-white",
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-primary" />
+                  <span className="font-semibold text-foreground">Doctor</span>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Complete invited doctor onboarding with verification documents
+                  and admin approval.
+                </p>
+              </button>
+            </div>
+          </div>
+          {accountType === "DOCTOR" ? (
+            <div className="p-6 pt-5">
+              <div className="space-y-6 rounded-[32px] border border-black/10 bg-[linear-gradient(180deg,rgba(255,252,246,1),rgba(255,244,246,0.94))] p-5 sm:p-6 lg:p-8 shadow-[0_24px_60px_-38px_rgba(15,23,42,0.45)]">
+                <div className="overflow-hidden rounded-[30px] border border-black/10 bg-[radial-gradient(circle_at_top_left,rgba(248,221,184,0.28),transparent_35%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(255,247,237,0.94))] p-5 sm:p-6 lg:p-7">
+                  <div className="grid gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.95fr)] lg:items-start">
+                    <div className="space-y-4">
+                      <Badge className="w-fit border border-black/10 bg-white/85 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-700 hover:bg-white/85">
+                        Doctor Onboarding
+                      </Badge>
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] border border-black/10 bg-black text-white shadow-[0_18px_34px_-24px_rgba(15,23,42,0.7)]">
+                          <Mail className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-xl font-semibold leading-tight text-foreground sm:text-2xl">
+                            Get your secure registration link by email
+                          </h3>
+                          <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-[15px]">
+                            Enter your doctor email once, receive your private
+                            signup link, then complete the full registration
+                            form with your certificate, Aadhaar, PAN, and
+                            professional details for admin review.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+                      <div className="rounded-[26px] border border-emerald-200 bg-emerald-50/90 px-5 py-4">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
+                          <ShieldCheck className="h-4 w-4" />
+                          Admin-approved flow
+                        </div>
+                        <p className="mt-3 text-sm leading-6 text-emerald-700">
+                          Your doctor account goes live only after document
+                          review is complete.
+                        </p>
+                      </div>
+
+                      <div className="rounded-[26px] border border-amber-200 bg-amber-50/90 px-5 py-4">
+                        <p className="text-sm font-semibold text-amber-900">
+                          What you&apos;ll need
+                        </p>
+                        <p className="mt-3 text-sm leading-6 text-amber-800">
+                          Registration certificate, Aadhaar card, PAN card, and
+                          your professional details.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  {[
+                    {
+                      title: "Enter your email",
+                      detail: "We send the private doctor signup link there.",
+                    },
+                    {
+                      title: "Open your link",
+                      detail: "Continue from the email on any device.",
+                    },
+                    {
+                      title: "Upload documents",
+                      detail: "Add your certificate, Aadhaar, PAN, and details.",
+                    },
+                    {
+                      title: "Wait for approval",
+                      detail: "Admin reviews everything before login is enabled.",
+                    },
+                  ].map((step, index) => (
+                    <div
+                      key={step.title}
+                      className="group relative overflow-hidden rounded-[26px] border border-black/10 bg-white/88 p-5 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.5)] transition-transform hover:-translate-y-0.5"
+                    >
+                      <div className="absolute right-0 top-0 h-20 w-20 rounded-full bg-[radial-gradient(circle,rgba(244,196,139,0.22),transparent_68%)]" />
+                      <div className="relative">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-black/10 bg-[#fff6eb] text-sm font-semibold text-slate-900">
+                          0{index + 1}
+                        </div>
+                        <p className="mt-5 text-base font-semibold text-foreground">
+                          {step.title}
+                        </p>
+                        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                          {step.detail}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="doctor-invite-email">
+                    Doctor Email Address
+                  </Label>
+                  <Input
+                    id="doctor-invite-email"
+                    type="email"
+                    placeholder="doctor@example.com"
+                    value={doctorInviteEmail}
+                    onChange={(e) => setDoctorInviteEmail(e.target.value)}
+                    disabled={doctorInviteLoading}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Button
+                    type="button"
+                    className="border border-black bg-black text-white hover:bg-black/90 sm:flex-1"
+                    onClick={requestDoctorRegistrationLink}
+                    disabled={doctorInviteLoading}
+                  >
+                    {doctorInviteLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending Link...
+                      </>
+                    ) : (
+                      "Email Me The Registration Link"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    className="bg-rose-600 text-white hover:bg-rose-700 sm:flex-1"
+                    onClick={() => setAccountType("PATIENT")}
+                    disabled={doctorInviteLoading}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+                  <p className="text-sm text-emerald-800">
+                    After you receive the email, open the link, complete the
+                    doctor form, upload every required document, and submit it
+                    for admin review.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 text-center text-sm text-muted-foreground">
+                Already approved?{" "}
+                <Link
+                  href="/login"
+                  className="font-semibold text-primary hover:text-primary/80 transition-colors"
+                >
+                  Sign in
+                </Link>
+              </div>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit(onSubmit, onFormError)}>
             <CardContent className="space-y-5">
               {/* Personal Information Section */}
@@ -911,7 +1155,7 @@ export default function RegisterPage() {
                 className="w-full h-12 text-base font-semibold"
                 disabled={loading || !selectedDoctor || !captchaSiteKey}
               >
-                {loading ? "Creating account..." : "Create account"}
+                {loading ? "Creating account..." : "Create your account"}
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 Already have an account?{" "}
@@ -924,6 +1168,7 @@ export default function RegisterPage() {
               </p>
             </CardFooter>
           </form>
+          )}
         </Card>
       </div>
     </div>

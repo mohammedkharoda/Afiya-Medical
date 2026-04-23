@@ -82,13 +82,13 @@ export function CarePathsSection() {
                             {card.badge}
                           </div>
                           <div
-                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${
+                            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${
                               card.emphasized
                                 ? "border-primary/15 bg-primary text-primary-foreground"
                                 : "border-primary/10 bg-card text-primary"
                             }`}
                           >
-                            <Icon className="h-5 w-5" />
+                            <Icon className="h-6 w-6" />
                           </div>
                         </div>
 
@@ -108,7 +108,7 @@ export function CarePathsSection() {
                           }`}
                         >
                           {card.cta}
-                          <ArrowRight className="h-4 w-4" />
+                          <ArrowRight className="h-5 w-5" />
                         </Link>
                       </div>
                     </TiltCard>

@@ -110,7 +110,7 @@ const navItems: NavItem[] = [
     roles: ["PATIENT", "DOCTOR"],
   },
   {
-    label: "Doctor Invitations",
+    label: "Doctor Review",
     href: "/admin/invitations",
     icon: <UserPlus size={20} />,
     roles: ["ADMIN"],
@@ -284,7 +284,7 @@ export default function DashboardLayout({
       >
         <div className="flex h-full flex-col bg-white">
           {/* Logo */}
-          <div className="flex h-20 items-center justify-center border-b border-border px-4 relative">
+          <div className="flex h-24 items-center justify-center border-b border-border px-4 relative">
             <Link
               href="/dashboard"
               className="flex flex-col items-center gap-1 cursor-pointer"
@@ -292,8 +292,8 @@ export default function DashboardLayout({
               <Image
                 src="/logos.png"
                 alt="Afiya Logo"
-                width={44}
-                height={44}
+                width={64}
+                height={64}
                 className="rounded-lg"
               />
             </Link>

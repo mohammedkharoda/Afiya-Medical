@@ -63,6 +63,7 @@ export async function GET(
       valid: true,
       email: invitation.email,
       name: invitation.name,
+      isTestAccount: invitation.isTestAccount,
     });
   } catch (error) {
     console.error("Error validating invitation:", error);

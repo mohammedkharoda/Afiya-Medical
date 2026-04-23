@@ -137,12 +137,12 @@ export default function AdminLoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md">
-        <div className="flex flex-col items-center mb-8">
+        <div className="mb-10 flex flex-col items-center">
           <Image
             src="/logos.png"
             alt="Afiya Logo"
-            width={64}
-            height={64}
+            width={84}
+            height={84}
             className="object-contain"
             unoptimized
           />
@@ -151,7 +151,7 @@ export default function AdminLoginPage() {
         <Card className="border-border shadow-xl">
           <CardHeader className="space-y-2 pb-6">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="h-6 w-6 text-primary" />
+              <ShieldCheck className="h-7 w-7 text-primary" />
               <CardTitle className="text-3xl font-heading text-foreground">
                 Admin Login
               </CardTitle>
@@ -169,9 +169,9 @@ export default function AdminLoginPage() {
                 <div className="space-y-2">
                   <Label
                     htmlFor="email"
-                    className="text-foreground font-medium flex items-center gap-2"
+                    className="flex items-center gap-2.5 font-medium text-foreground"
                   >
-                    <Mail size={16} className="text-primary" />
+                    <Mail size={18} className="text-primary" />
                     Admin Email
                   </Label>
                   <Input
@@ -200,7 +200,7 @@ export default function AdminLoginPage() {
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Sending OTP...
                     </>
                   ) : (

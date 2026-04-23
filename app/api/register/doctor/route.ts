@@ -3,15 +3,13 @@ import {
   db,
   users,
   doctorInvitations,
-  sessions,
   doctorProfiles,
+  doctorVerifications,
 } from "@/lib/db";
 import { eq, ilike } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { doctorRegisterSchema } from "@/lib/validations/auth";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
-import { createId } from "@paralleldrive/cuid2";
-import { getSessionExpiryByRole } from "@/lib/session-utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,6 +28,13 @@ export async function POST(req: NextRequest) {
       experience,
       upiId,
       clinicAddress,
+      registrationNumber,
+      registrationCertificateUrl,
+      registrationCertificateName,
+      aadhaarCardUrl,
+      aadhaarCardName,
+      panCardUrl,
+      panCardName,
     } = validatedData;
 
     // Validate phone and convert to E.164
@@ -108,7 +113,7 @@ export async function POST(req: NextRequest) {
         password: hashedPassword,
         phone: phoneE164,
         role: "DOCTOR",
-        isVerified: true, // Doctor is pre-verified via invitation
+        isVerified: false,
         emailVerified: true,
       })
       .returning({
@@ -129,6 +134,19 @@ export async function POST(req: NextRequest) {
       isTestAccount: invitation.isTestAccount,
     });
 
+    await db.insert(doctorVerifications).values({
+      userId: user.id,
+      invitationId: invitation.id,
+      registrationNumber,
+      registrationCertificateUrl,
+      registrationCertificateName,
+      aadhaarCardUrl,
+      aadhaarCardName,
+      panCardUrl,
+      panCardName,
+      status: "PENDING",
+    });
+
     // Mark invitation as accepted
     await db
       .update(doctorInvitations)
@@ -138,36 +156,14 @@ export async function POST(req: NextRequest) {
       })
       .where(eq(doctorInvitations.id, invitation.id));
 
-    // Create session for auto-login
-    const sessionToken = createId();
-    const expiresAt = getSessionExpiryByRole("DOCTOR");
-
-    await db.insert(sessions).values({
-      id: createId(),
-      token: sessionToken,
-      userId: user.id,
-      expiresAt,
-      ipAddress: null,
-      userAgent: null,
-    });
-
-    // Set session cookie
-    const response = NextResponse.json({
+    return NextResponse.json({
       success: true,
-      message: "Registration successful",
+      message:
+        "Registration submitted successfully. Your documents are now pending admin review.",
       user,
-      redirectTo: "/dashboard",
+      redirectTo: "/login",
+      reviewStatus: "PENDING",
     });
-
-    response.cookies.set("better-auth.session_token", sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      expires: expiresAt,
-    });
-
-    return response;
   } catch (error: unknown) {
     console.error("Doctor registration error:", error);
 

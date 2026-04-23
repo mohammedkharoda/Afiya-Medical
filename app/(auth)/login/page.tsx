@@ -19,7 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Mail, Lock, AlertTriangle, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, AlertTriangle, Eye, EyeOff, X } from "lucide-react";
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -136,12 +136,12 @@ function LoginForm() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md">
-        <div className="flex flex-col items-center mb-8">
+        <div className="mb-10 flex flex-col items-center">
           <Image
             src="/logos.png"
             alt="Afiya Logo"
-            width={64}
-            height={64}
+            width={84}
+            height={84}
             className="object-contain"
             unoptimized
           />
@@ -149,8 +149,8 @@ function LoginForm() {
 
         {/* Session Expired Warning */}
         {sessionExpired && (
-          <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-4 flex items-start gap-3 relative">
-            <AlertTriangle className="h-5 w-5 text-orange-600 shrink-0 mt-0.5" />
+          <div className="relative mb-4 flex items-start gap-3 rounded-lg border border-orange-200 bg-orange-50 p-4">
+            <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-orange-600" />
             <div className="flex-1">
               <p className="font-medium text-orange-800">Session Expired</p>
               <p className="text-sm text-orange-700">
@@ -159,10 +159,10 @@ function LoginForm() {
             </div>
             <button
               onClick={() => setSessionExpired(false)}
-              className="text-orange-600 hover:text-orange-800 shrink-0"
+              className="shrink-0 text-orange-600 transition-colors hover:text-orange-800"
               aria-label="Dismiss"
             >
-              ✕
+              <X className="h-4 w-4" />
             </button>
           </div>
         )}
@@ -172,7 +172,7 @@ function LoginForm() {
             <CardTitle className="text-3xl font-heading text-foreground">
               Sign in
             </CardTitle>
-            <CardDescription className="text-muted-foreground text-base">
+            <CardDescription className="text-base text-muted-foreground">
               Enter your email and password to access your account
             </CardDescription>
           </CardHeader>
@@ -181,9 +181,9 @@ function LoginForm() {
               <div className="space-y-2">
                 <Label
                   htmlFor="email"
-                  className="text-foreground font-medium flex items-center gap-2"
+                  className="flex items-center gap-2.5 font-medium text-foreground"
                 >
-                  <Mail size={16} className="text-primary" />
+                  <Mail size={18} className="text-primary" />
                   Email
                 </Label>
                 <Input
@@ -204,30 +204,30 @@ function LoginForm() {
               <div className="space-y-2">
                 <Label
                   htmlFor="password"
-                  className="text-foreground font-medium flex items-center gap-2"
+                  className="flex items-center gap-2.5 font-medium text-foreground"
                 >
-                  <Lock size={16} className="text-primary" />
+                  <Lock size={18} className="text-primary" />
                   Password
                 </Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    className="h-11 border-input focus:border-primary focus:ring-primary pr-10"
+                    placeholder="********"
+                    className="h-11 border-input pr-10 focus:border-primary focus:ring-primary"
                     {...register("password")}
                     disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                     tabIndex={-1}
                     aria-label={
                       showPassword ? "Hide password" : "Show password"
                     }
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
                 {errors.password && (
@@ -240,7 +240,7 @@ function LoginForm() {
               <div className="text-right">
                 <Link
                   href="/forgot-password"
-                  className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                  className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
                 >
                   Forgot password?
                 </Link>
@@ -251,9 +251,9 @@ function LoginForm() {
               <Button
                 type="submit"
                 size="lg"
-                className="w-full h-12 text-base font-semibold"
+                className="h-12 w-full text-base font-semibold"
                 disabled={loading}
-                variant={"outline"}
+                variant="outline"
               >
                 {loading ? "Signing in..." : "Sign in"}
               </Button>
@@ -261,7 +261,7 @@ function LoginForm() {
                 Don&apos;t have an account?{" "}
                 <Link
                   href="/register"
-                  className="font-semibold text-primary hover:text-primary/80 transition-colors"
+                  className="font-semibold text-primary transition-colors hover:text-primary/80"
                 >
                   Sign up
                 </Link>

@@ -30,7 +30,7 @@ export function HeroSection() {
         <div>
           <Reveal>
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-primary shadow-[0_18px_45px_-28px_rgba(61,122,122,0.3)] backdrop-blur-sm">
-              <ShieldCheck className="h-3.5 w-3.5" />
+              <ShieldCheck className="h-4 w-4" />
               Wellness focused care
             </div>
           </Reveal>
@@ -68,7 +68,7 @@ export function HeroSection() {
                   href="/register"
                   className="inline-flex min-h-[3.5rem] min-w-[9.75rem] cursor-pointer items-center justify-center gap-2 rounded-[1.35rem] border border-primary/40 bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-[0_22px_48px_-28px_rgba(61,122,122,0.95)] transition-all duration-300 hover:border-primary hover:bg-primary hover:shadow-[0_26px_54px_-26px_rgba(61,122,122,1)]"
                 >
-                  <CalendarCheck className="h-4 w-4" />
+                  <CalendarCheck className="h-5 w-5" />
                   Sign up
                 </Link>
               </HoverLift>
@@ -78,7 +78,7 @@ export function HeroSection() {
                   className="group inline-flex min-h-[3.5rem] min-w-[9.75rem] cursor-pointer items-center justify-center gap-2 rounded-[1.35rem] border border-foreground/45 bg-white/82 px-6 text-sm font-semibold text-foreground shadow-[0_18px_34px_-30px_rgba(17,24,39,0.3)] transition-all duration-300 hover:border-primary hover:bg-primary hover:text-primary-foreground hover:shadow-[0_22px_48px_-28px_rgba(61,122,122,0.9)]"
                 >
                   Login
-                  <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+                  <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-0.5" />
                 </Link>
               </HoverLift>
             </div>
@@ -118,8 +118,8 @@ export function HeroSection() {
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
               <TiltCard maxTilt={7}>
                 <div className="h-full rounded-[1.5rem] border border-primary/12 bg-white/76 p-4 shadow-[0_18px_55px_-42px_rgba(17,24,39,0.32)]">
-                  <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                    <HeartHandshake className="h-5 w-5" />
+                  <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <HeartHandshake className="h-6 w-6" />
                   </div>
                   <p className="text-sm font-semibold text-foreground">
                     Human-first flow
@@ -128,8 +128,8 @@ export function HeroSection() {
               </TiltCard>
               <TiltCard maxTilt={7}>
                 <div className="h-full rounded-[1.5rem] border border-primary/12 bg-white/76 p-4 shadow-[0_18px_55px_-42px_rgba(17,24,39,0.32)]">
-                  <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/15 text-[#7a5d46]">
-                    <Clock3 className="h-5 w-5" />
+                  <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/15 text-[#7a5d46]">
+                    <Clock3 className="h-6 w-6" />
                   </div>
                   <p className="text-sm font-semibold text-foreground">
                     Faster next steps
@@ -138,8 +138,8 @@ export function HeroSection() {
               </TiltCard>
               <TiltCard maxTilt={7}>
                 <div className="h-full rounded-[1.5rem] border border-primary/12 bg-white/76 p-4 shadow-[0_18px_55px_-42px_rgba(17,24,39,0.32)]">
-                  <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary/80 text-primary">
-                    <Sparkles className="h-5 w-5" />
+                  <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary/80 text-primary">
+                    <Sparkles className="h-6 w-6" />
                   </div>
                   <p className="text-sm font-semibold text-foreground">
                     Modern visual feel

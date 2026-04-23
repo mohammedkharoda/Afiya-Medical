@@ -24,7 +24,7 @@ export function CTABanner() {
                 href="/register"
                 className="inline-flex min-h-[3.5rem] min-w-[9.75rem] cursor-pointer items-center justify-center gap-2 rounded-[1.35rem] border border-white/75 bg-white px-6 text-sm font-semibold text-primary shadow-[0_22px_40px_-22px_rgba(255,255,255,0.6)] transition-all duration-300 hover:border-white hover:bg-white hover:shadow-[0_24px_42px_-20px_rgba(255,255,255,0.7)]"
               >
-                <CalendarCheck className="h-4 w-4" />
+                <CalendarCheck className="h-5 w-5" />
                 Sign up
               </Link>
             </HoverLift>
@@ -33,11 +33,11 @@ export function CTABanner() {
                 href="/login"
                 className="group inline-flex min-h-[3.5rem] min-w-[9.75rem] cursor-pointer items-center justify-center gap-2 rounded-[1.35rem] border border-white/55 bg-white/16 px-6 text-sm font-semibold text-white transition-all duration-300 hover:border-[#143f44] hover:bg-[#143f44] hover:shadow-[0_24px_42px_-20px_rgba(20,63,68,0.55)]"
               >
-                <LogIn className="h-4 w-4 transition-colors duration-300 group-hover:text-white" />
+                <LogIn className="h-5 w-5 transition-colors duration-300 group-hover:text-white" />
                 <span className="transition-colors duration-300 group-hover:text-white">
                   Login
                 </span>
-                <ArrowRight className="h-4 w-4 transition-colors duration-300 group-hover:text-white" />
+                <ArrowRight className="h-5 w-5 transition-colors duration-300 group-hover:text-white" />
               </Link>
             </HoverLift>
           </div>

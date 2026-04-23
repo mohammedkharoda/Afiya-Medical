@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db, users, sessions } from "@/lib/db";
+import { db, users, sessions, doctorVerifications } from "@/lib/db";
 import { eq, ilike } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { loginSchema } from "@/lib/validations/auth";
@@ -45,6 +45,31 @@ export async function POST(req: NextRequest) {
 
     // Check if email is verified
     if (!user.isVerified) {
+      if (user.role === "DOCTOR") {
+        const verification = await db.query.doctorVerifications.findFirst({
+          where: eq(doctorVerifications.userId, user.id),
+        });
+
+        if (verification?.status === "REJECTED") {
+          return NextResponse.json(
+            {
+              error: verification.reviewNotes
+                ? `Your doctor profile was rejected: ${verification.reviewNotes}`
+                : "Your doctor profile was rejected by the admin team. Please contact the admin.",
+            },
+            { status: 403 },
+          );
+        }
+
+        return NextResponse.json(
+          {
+            error:
+              "Your doctor profile is pending admin approval. Please wait until your documents are reviewed.",
+          },
+          { status: 403 },
+        );
+      }
+
       return NextResponse.json(
         { error: "Please verify your email before logging in" },
         { status: 403 },
