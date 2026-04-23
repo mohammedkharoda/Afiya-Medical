@@ -185,7 +185,6 @@ export const PrescriptionPDF = ({ prescription }: PrescriptionPDFProps) => (
         <Image
           style={styles.logo}
           src={APP_LOGO_URL}
-          alt="Afiya logo"
         />
         <Text style={styles.clinicName}>Afiya Medical Clinic</Text>
         <Text style={styles.subtitle}>Medical Prescription</Text>

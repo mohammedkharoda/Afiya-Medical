@@ -150,12 +150,12 @@ export function TiltCard({
   const glowBackground = useTransform(
     [glowX, glowY],
     ([x, y]) =>
-      `radial-gradient(circle at ${x}% ${y}%, rgba(255,255,255,0.28), transparent 42%)`,
+      `radial-gradient(circle at ${x as number}% ${y as number}%, rgba(255,255,255,0.28), transparent 42%)`,
   );
 
   const glowOpacity = useTransform(
     [rotateXRaw, rotateYRaw],
-    ([x, y]) => Math.min((Math.abs(x) + Math.abs(y)) / (maxTilt * 2), 1),
+    ([x, y]) => Math.min((Math.abs(x as number) + Math.abs(y as number)) / (maxTilt * 2), 1),
   );
 
   const handleMove = (event: ReactMouseEvent<HTMLDivElement>) => {
