@@ -2,15 +2,17 @@
 
 import { EMAIL_CONFIG } from "./config";
 import { getEmailWrapper, getEmailHeader, getEmailFooter } from "./layout";
+import { getReferenceBlock } from "./reference";
 
-const { primaryColor, errorColor, textPrimary, textSecondary, bgLight } =
-  EMAIL_CONFIG;
+const { primaryColor, errorColor, textSecondary, bgLight } = EMAIL_CONFIG;
 
 interface AppointmentDeclinedTemplateData {
   patientName: string;
   date: string;
   time: string;
   reason?: string;
+  doctorPublicId?: string;
+  patientPublicId?: string;
   clinicName: string;
   clinicAddress?: string;
 }
@@ -25,7 +27,8 @@ export const getAppointmentDeclinedTemplate = ({
   date,
   time,
   reason,
-  clinicName,
+  doctorPublicId,
+  patientPublicId,
   clinicAddress,
 }: AppointmentDeclinedTemplateData): string => {
   const reasonSection = reason
@@ -64,6 +67,7 @@ export const getAppointmentDeclinedTemplate = ({
       </div>
 
       <p style="color: ${textSecondary}; font-size: 14px;">We apologize for any inconvenience. Thank you for your understanding.</p>
+      ${getReferenceBlock({ doctorPublicId, patientPublicId })}
     </div>
     ${getEmailFooter({ address: clinicAddress })}
   `);

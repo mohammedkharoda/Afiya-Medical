@@ -543,10 +543,10 @@ function DoctorRegisterForm() {
                 </p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <p className="text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-[#1c2430]">
                   Review Requirement
                 </p>
-                <p className="mt-1 font-medium text-foreground">
+                <p className="mt-2 text-[1.1rem] font-medium leading-[1.35] text-[#111827]">
                   Admin approval is required before login
                 </p>
               </div>
@@ -1029,7 +1029,7 @@ function DoctorRegisterForm() {
               <Button
                 type="submit"
                 size="lg"
-                className="h-12 min-w-56 text-base font-semibold"
+                className="h-14 min-w-[19rem] rounded-full border border-[#d7c3a3] bg-[#f5ead8] px-10 text-[1.02rem] font-semibold tracking-[0.01em] text-[#18212b] shadow-[0_16px_30px_-24px_rgba(17,24,39,0.34),0_1px_0_rgba(255,255,255,0.72)_inset] hover:-translate-y-0.5 hover:border-[#cdb38f] hover:bg-[#f1e3cf] hover:text-[#101826] active:translate-y-0 active:shadow-[0_10px_18px_-16px_rgba(17,24,39,0.28),0_1px_0_rgba(255,255,255,0.65)_inset] focus-visible:ring-[#c8a46b]/45"
                 disabled={loading || uploadingField !== null}
               >
                 {loading ? (

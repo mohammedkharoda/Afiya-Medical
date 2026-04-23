@@ -1,21 +1,17 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-
-export const runtime = "nodejs";
+import { getSession } from "@/lib/session";
 
 async function isValidSession(request: NextRequest): Promise<boolean> {
-  const token = request.cookies.get("better-auth.session_token")?.value;
-  if (!token) return false;
   try {
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await getSession(request);
     return !!session;
   } catch {
     return false;
   }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protect only real app routes so unknown URLs can fall through to Next's
@@ -34,10 +30,7 @@ export async function middleware(request: NextRequest) {
     "/doctor/revenue",
     "/doctor/schedule",
   ]);
-  const protectedRoutePrefixes = [
-    "/appointments/",
-    "/patients/",
-  ];
+  const protectedRoutePrefixes = ["/appointments/", "/patients/"];
   const isProtectedRoute =
     protectedExactRoutes.has(pathname) ||
     protectedRoutePrefixes.some((prefix) => pathname.startsWith(prefix));

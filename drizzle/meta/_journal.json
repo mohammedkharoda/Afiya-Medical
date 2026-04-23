@@ -64,6 +64,13 @@
       "when": 1771800000000,
       "tag": "0008_doctor_verification_gateway",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776900000000,
+      "tag": "0009_public_profile_ids",
+      "breakpoints": true
     }
   ]
 }

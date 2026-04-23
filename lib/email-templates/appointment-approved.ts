@@ -2,12 +2,12 @@
 
 import { EMAIL_CONFIG } from "./config";
 import { getEmailWrapper, getEmailHeader, getEmailFooter } from "./layout";
+import { getReferenceBlock } from "./reference";
 
 const {
   primaryColor,
   successColor,
   warningColor,
-  textPrimary,
   textSecondary,
   textMuted,
   bgLight,
@@ -20,6 +20,8 @@ interface AppointmentApprovedTemplateData {
   date: string;
   time: string;
   doctorName: string;
+  doctorPublicId?: string;
+  patientPublicId?: string;
   clinicName: string;
   clinicAddress?: string;
 }
@@ -34,6 +36,8 @@ export const getAppointmentApprovedTemplate = ({
   date,
   time,
   doctorName,
+  doctorPublicId,
+  patientPublicId,
   clinicName,
   clinicAddress,
 }: AppointmentApprovedTemplateData): string => {
@@ -62,6 +66,7 @@ export const getAppointmentApprovedTemplate = ({
       </div>
 
       <p style="color: ${textMuted}; font-size: 14px;">If you need to cancel your appointment, please do so at least 24 hours in advance through your patient portal.</p>
+      ${getReferenceBlock({ doctorPublicId, patientPublicId })}
     </div>
     ${getEmailFooter({ address: clinicAddress })}
   `);

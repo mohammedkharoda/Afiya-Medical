@@ -206,6 +206,13 @@ export default function DashboardLayout({
     ? navItems.filter((item) => !item.roles || item.roles.includes(userRole))
     : [];
 
+  const currentPageLabel =
+    filteredNavItems.find((item) =>
+      item.href === "/dashboard"
+        ? pathname === "/dashboard"
+        : pathname === item.href || pathname.startsWith(item.href + "/"),
+    )?.label || "Dashboard";
+
   const handleSignOut = async () => {
     // Helper to clear all auth cookies on client side
     const clearAuthCookies = () => {
@@ -302,6 +309,7 @@ export default function DashboardLayout({
               size="icon"
               className="lg:hidden absolute right-2 top-1/2 -translate-y-1/2"
               onClick={() => setSidebarOpen(false)}
+              aria-label="Close navigation"
             >
               <X size={20} />
             </Button>
@@ -369,12 +377,12 @@ export default function DashboardLayout({
               size="icon"
               className="lg:hidden"
               onClick={() => setSidebarOpen(true)}
+              aria-label="Open navigation"
             >
               <Menu size={20} />
             </Button>
-            <h1 className="font-heading text-lg font-semibold text-foreground lg:text-xl">
-              {filteredNavItems.find((item) => item.href === pathname)?.label ||
-                "Dashboard"}
+            <h1 className="max-w-[55vw] truncate font-heading text-base font-semibold text-foreground sm:max-w-[60vw] sm:text-lg lg:max-w-none lg:text-xl">
+              {currentPageLabel}
             </h1>
           </div>
 

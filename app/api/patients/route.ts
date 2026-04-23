@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
     const patients = patientsData
       .map((patient) => ({
         id: patient.id,
+        publicId: patient.publicId,
         name: patient.user.name,
         email: patient.user.email,
         phone: patient.user.phone,

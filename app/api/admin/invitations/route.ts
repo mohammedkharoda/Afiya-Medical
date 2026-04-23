@@ -163,8 +163,9 @@ export async function POST(req: NextRequest) {
       "name" in error &&
       error.name === "ZodError"
     ) {
+      const zodError = error as { issues?: Array<{ message?: string }> };
       return NextResponse.json(
-        { error: "Invalid input data" },
+        { error: zodError.issues?.[0]?.message || "Invalid input data" },
         { status: 400 },
       );
     }

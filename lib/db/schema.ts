@@ -11,6 +11,9 @@ import {
 import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 
+const createPublicProfileId = (prefix: "DOC" | "PAT") =>
+  `${prefix}-${createId().replace(/[^a-z0-9]/gi, "").slice(0, 10).toUpperCase()}`;
+
 // Enums
 export const roleEnum = pgEnum("Role", ["PATIENT", "DOCTOR", "ADMIN"]);
 export const genderEnum = pgEnum("Gender", ["MALE", "FEMALE", "OTHER"]);
@@ -143,6 +146,9 @@ export const doctorProfiles = pgTable(
     userId: text("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    publicId: text("publicId")
+      .$defaultFn(() => createPublicProfileId("DOC"))
+      .notNull(),
     speciality: text("speciality").notNull(), // e.g., "General Physician", "Cardiologist"
     degrees: text("degrees").array().default([]).notNull(), // e.g., ["MBBS", "MD"]
     experience: integer("experience"), // years of experience
@@ -159,7 +165,10 @@ export const doctorProfiles = pgTable(
       .$defaultFn(() => new Date())
       .notNull(),
   },
-  (table) => [uniqueIndex("doctor_profiles_user_id_idx").on(table.userId)],
+  (table) => [
+    uniqueIndex("doctor_profiles_user_id_idx").on(table.userId),
+    uniqueIndex("doctor_profiles_public_id_idx").on(table.publicId),
+  ],
 );
 
 export const patientProfiles = pgTable(
@@ -171,6 +180,9 @@ export const patientProfiles = pgTable(
     userId: text("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    publicId: text("publicId")
+      .$defaultFn(() => createPublicProfileId("PAT"))
+      .notNull(),
     preferredDoctorId: text("preferredDoctorId").references(() => users.id, {
       onDelete: "set null",
     }), // Preferred doctor selected during registration
@@ -189,7 +201,10 @@ export const patientProfiles = pgTable(
       .$defaultFn(() => new Date())
       .notNull(),
   },
-  (table) => [uniqueIndex("patient_profiles_user_id_idx").on(table.userId)],
+  (table) => [
+    uniqueIndex("patient_profiles_user_id_idx").on(table.userId),
+    uniqueIndex("patient_profiles_public_id_idx").on(table.publicId),
+  ],
 );
 
 export const medicalHistory = pgTable(

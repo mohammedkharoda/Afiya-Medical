@@ -2,6 +2,7 @@
 
 import { EMAIL_CONFIG } from "./config";
 import { getEmailWrapper, getEmailHeader, getEmailFooter } from "./layout";
+import { getReferenceBlock } from "./reference";
 
 const { primaryColor, infoColor, textPrimary, textSecondary, bgLight, bgInfo } =
   EMAIL_CONFIG;
@@ -11,6 +12,8 @@ interface AppointmentReminderTemplateData {
   date: string;
   time: string;
   doctorName: string;
+  doctorPublicId?: string;
+  patientPublicId?: string;
   clinicName: string;
   clinicAddress?: string;
 }
@@ -28,6 +31,8 @@ export const getAppointmentReminderTemplate = ({
   date,
   time,
   doctorName,
+  doctorPublicId,
+  patientPublicId,
   clinicName,
   clinicAddress,
 }: AppointmentReminderTemplateData): string => {
@@ -55,6 +60,7 @@ export const getAppointmentReminderTemplate = ({
       <div style="background: ${bgInfo}; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${infoColor};">
         <p style="margin: 0; color: #1e40af;"><strong>Tip:</strong> Please ensure you arrive on time. Bring any relevant medical documents or reports.</p>
       </div>
+      ${getReferenceBlock({ doctorPublicId, patientPublicId })}
     </div>
     ${getEmailFooter({ address: clinicAddress })}
   `);

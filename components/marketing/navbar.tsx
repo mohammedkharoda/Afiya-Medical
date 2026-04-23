@@ -1,14 +1,43 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
+import { Menu, X } from "lucide-react";
 import { BrandLockup } from "@/components/marketing/brand-lockup";
 import { HoverLift } from "@/components/marketing/motion";
 import { marketingNavLinks } from "@/components/marketing/routes";
 
 export function MarketingNavbar() {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) {
+      document.body.style.removeProperty("overflow");
+      return;
+    }
+
+    document.body.style.overflow = "hidden";
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+      document.body.style.removeProperty("overflow");
+    };
+  }, [isMobileMenuOpen]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-primary/10 bg-[rgba(249,244,235,0.82)] backdrop-blur-2xl">
@@ -18,13 +47,13 @@ export function MarketingNavbar() {
             <motion.div whileHover={{ y: -2, scale: 1.02 }} transition={{ duration: 0.24 }}>
               <BrandLockup
                 size="compact"
-                className="rounded-[1.5rem] bg-transparent px-1 py-1"
+                className="rounded-3xl bg-transparent px-1 py-1"
               />
             </motion.div>
           </Link>
         </HoverLift>
 
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-2 lg:flex">
           {marketingNavLinks.map((link, index) => {
             const active = pathname === link.href;
 
@@ -59,7 +88,7 @@ export function MarketingNavbar() {
           <motion.div whileHover={{ y: -3 }} whileTap={{ scale: 0.98 }}>
             <Link
               href="/login"
-              className="inline-flex min-h-[3.25rem] cursor-pointer items-center justify-center rounded-[1.25rem] border border-foreground/35 bg-white/78 px-5 text-sm font-medium text-foreground shadow-[0_16px_36px_-34px_rgba(17,24,39,0.45)] transition-all duration-300 hover:border-primary hover:bg-primary hover:text-primary-foreground"
+              className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-2xl border border-foreground/35 bg-white/78 px-4 text-sm font-medium text-foreground shadow-[0_16px_36px_-34px_rgba(17,24,39,0.45)] transition-all duration-300 hover:border-primary hover:bg-primary hover:text-primary-foreground lg:min-h-13 lg:rounded-[1.25rem] lg:px-5"
             >
               Login
             </Link>
@@ -67,13 +96,67 @@ export function MarketingNavbar() {
           <motion.div whileHover={{ y: -4, scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Link
               href="/register"
-              className="inline-flex min-h-[3.25rem] cursor-pointer items-center justify-center rounded-[1.25rem] border border-primary/35 bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-[0_18px_36px_-22px_rgba(61,122,122,0.95)] transition-all duration-300 hover:border-primary hover:bg-primary hover:shadow-[0_22px_40px_-20px_rgba(61,122,122,0.98)]"
+              className="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-2xl border border-primary/35 bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_18px_36px_-22px_rgba(61,122,122,0.95)] transition-all duration-300 hover:border-primary hover:bg-primary hover:shadow-[0_22px_40px_-20px_rgba(61,122,122,0.98)] lg:min-h-13 lg:rounded-[1.25rem] lg:px-5"
             >
               Sign up
             </Link>
           </motion.div>
+          <button
+            type="button"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[1.1rem] border border-primary/20 bg-white/82 text-foreground transition-colors hover:border-primary/35 hover:bg-white lg:hidden"
+            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="marketing-mobile-menu"
+            onClick={() => setIsMobileMenuOpen((open) => !open)}
+          >
+            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
       </nav>
+
+      <div
+        className={`lg:hidden ${isMobileMenuOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+      >
+        <div
+          className={`fixed inset-0 top-19 z-40 bg-black/35 transition-opacity duration-200 ${
+            isMobileMenuOpen ? "opacity-100" : "opacity-0"
+          }`}
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+
+        <motion.div
+          id="marketing-mobile-menu"
+          initial={false}
+          animate={{
+            y: isMobileMenuOpen ? 0 : -12,
+            opacity: isMobileMenuOpen ? 1 : 0,
+          }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="absolute left-0 right-0 top-full z-50 border-b border-primary/10 bg-[rgba(249,244,235,0.98)] px-4 pb-5 pt-3 shadow-[0_18px_40px_-30px_rgba(17,24,39,0.55)]"
+          aria-hidden={!isMobileMenuOpen}
+        >
+          <div className="mx-auto grid max-w-6xl gap-2">
+            {marketingNavLinks.map((link) => {
+              const active = pathname === link.href;
+
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`inline-flex min-h-11 items-center rounded-[0.95rem] px-4 text-base font-medium transition-all duration-200 ${
+                    active
+                      ? "border border-primary/20 bg-primary/10 text-foreground"
+                      : "border border-transparent text-muted-foreground hover:border-primary/10 hover:bg-white/80 hover:text-foreground"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </div>
+        </motion.div>
+      </div>
     </header>
   );
 }

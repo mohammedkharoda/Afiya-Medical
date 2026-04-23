@@ -2,6 +2,7 @@
 
 import { EMAIL_CONFIG } from "./config";
 import { getEmailWrapper, getEmailHeader, getEmailFooter } from "./layout";
+import { getReferenceBlock } from "./reference";
 
 const {
   primaryColor,
@@ -17,6 +18,8 @@ interface AppointmentPendingTemplateData {
   date: string;
   time: string;
   doctorName: string;
+  doctorPublicId?: string;
+  patientPublicId?: string;
   clinicName: string;
   clinicAddress?: string;
 }
@@ -31,6 +34,8 @@ export const getAppointmentPendingTemplate = ({
   date,
   time,
   doctorName,
+  doctorPublicId,
+  patientPublicId,
   clinicName,
   clinicAddress,
 }: AppointmentPendingTemplateData): string => {
@@ -56,6 +61,7 @@ export const getAppointmentPendingTemplate = ({
       </div>
 
       <p style="color: ${textSecondary}; font-size: 14px;">Thank you for choosing ${clinicName}!</p>
+      ${getReferenceBlock({ doctorPublicId, patientPublicId })}
     </div>
     ${getEmailFooter({ address: clinicAddress })}
   `);

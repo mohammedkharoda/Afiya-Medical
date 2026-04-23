@@ -113,3 +113,15 @@ export {
   getDoctorInvitationTemplate,
   getDoctorInvitationSubject,
 } from "./doctor-invitation";
+
+// Doctor Registration Request (admin notification)
+export {
+  getDoctorRegistrationRequestTemplate,
+  getDoctorRegistrationRequestSubject,
+} from "./doctor-registration-request";
+
+// Doctor Verification Request (admin notification)
+export {
+  getDoctorVerificationRequestTemplate,
+  getDoctorVerificationRequestSubject,
+} from "./doctor-verification-request";

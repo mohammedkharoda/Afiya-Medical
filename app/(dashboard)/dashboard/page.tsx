@@ -61,6 +61,16 @@ export default function DashboardPage() {
   const isPatient = userRole === "PATIENT";
   const isDoctor = userRole === "DOCTOR";
   const isAdmin = userRole === "ADMIN";
+  const profileReferenceId = isPatient
+    ? userData?.patientPublicId
+    : isDoctor
+      ? userData?.doctorPublicId
+      : null;
+  const profileReferenceLabel = isPatient
+    ? "Patient ID"
+    : isDoctor
+      ? "Doctor ID"
+      : null;
 
   // Skip medical history check immediately if not a patient or no user data
   useEffect(() => {
@@ -323,6 +333,14 @@ export default function DashboardPage() {
             !isAdmin &&
             "Here's an overview of your dashboard."}
         </p>
+        {profileReferenceId && profileReferenceLabel ? (
+          <div className="mt-4 inline-flex items-center gap-3 rounded-full border border-border/70 bg-background/80 px-4 py-2 text-sm shadow-sm">
+            <span className="text-muted-foreground">{profileReferenceLabel}</span>
+            <span className="font-semibold tracking-[0.08em] text-foreground">
+              {profileReferenceId}
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {/* Stats Cards */}

@@ -21,10 +21,7 @@ import { format } from "date-fns";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import {
@@ -102,6 +99,8 @@ export default function RegisterPage() {
   const [aiRecommendation, setAiRecommendation] =
     useState<AIRecommendation | null>(null);
   const [showAIHelper, setShowAIHelper] = useState(false);
+  const fieldClassName =
+    "h-12 rounded-2xl border-[#d8c5a8] bg-white/88 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.45)] transition-colors placeholder:text-[#9b927f] focus:border-[#3d7a7a] focus:ring-[#3d7a7a]/20";
 
   const {
     register,
@@ -330,7 +329,7 @@ export default function RegisterPage() {
       <div
         className={cn(
           "w-full transition-all duration-300",
-          accountType === "DOCTOR" ? "max-w-5xl" : "max-w-lg",
+          accountType === "DOCTOR" ? "max-w-5xl" : "max-w-[68rem]",
         )}
       >
         <div className="flex flex-col items-center mb-8">
@@ -341,27 +340,31 @@ export default function RegisterPage() {
             height={64}
           />
         </div>
-        <Card className="border-border shadow-xl">
-          <CardHeader className="space-y-2 pb-6">
-            <CardTitle className="text-3xl font-heading text-foreground">
-              Create your account
-            </CardTitle>
-            <CardDescription className="text-muted-foreground text-base">
-              {accountType === "PATIENT"
-                ? "Enter your information to create your account"
-                : "Enter your email to receive the doctor registration link and upload your documents for admin review"}
-            </CardDescription>
-          </CardHeader>
-          <div className="px-6">
+        <Card className="overflow-hidden border-[#2a2a2a] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(247,240,229,0.92))] shadow-[0_32px_70px_-48px_rgba(15,23,42,0.58)]">
+          <div className="border-b border-[#dec9a7] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,241,229,0.86))] px-6 py-6 shadow-[0_1px_0_rgba(255,255,255,0.82)_inset] md:px-8">
+            <div className="flex flex-col gap-2 text-center sm:text-left">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-[#435a66]">
+                {accountType === "PATIENT"
+                  ? "Patient Registration"
+                  : "Doctor Onboarding"}
+              </p>
+              <p className="max-w-3xl text-[1rem] leading-7 text-[#4a5d6c]">
+                {accountType === "PATIENT"
+                  ? "Add your details, choose your preferred doctor, and finish registration from one clean flow."
+                  : "Enter your email to receive the doctor registration link, then continue the secure approval process from your inbox."}
+              </p>
+            </div>
+          </div>
+          <div className="px-6 pt-6 md:px-8">
             <div className="grid gap-3 sm:grid-cols-2">
               <button
                 type="button"
                 onClick={() => setAccountType("PATIENT")}
                 className={cn(
-                  "rounded-2xl border bg-[#fbf6ee] px-4 py-4 text-left transition-all",
+                  "rounded-[1.45rem] border px-5 py-5 text-left transition-all",
                   accountType === "PATIENT"
-                    ? "border-black bg-white shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)]"
-                    : "border-black/20 hover:border-black/65 hover:bg-white",
+                    ? "border-[#20262d] bg-white shadow-[0_18px_34px_-26px_rgba(15,23,42,0.42)]"
+                    : "border-[#d9c8b1] bg-[#fbf6ee] hover:border-[#5f6770] hover:bg-white/95",
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -378,10 +381,10 @@ export default function RegisterPage() {
                 type="button"
                 onClick={() => setAccountType("DOCTOR")}
                 className={cn(
-                  "rounded-2xl border bg-[#fbf6ee] px-4 py-4 text-left transition-all",
+                  "rounded-[1.45rem] border px-5 py-5 text-left transition-all",
                   accountType === "DOCTOR"
-                    ? "border-black bg-white shadow-[0_12px_30px_-22px_rgba(15,23,42,0.45)]"
-                    : "border-black/20 hover:border-black/65 hover:bg-white",
+                    ? "border-[#20262d] bg-white shadow-[0_18px_34px_-26px_rgba(15,23,42,0.42)]"
+                    : "border-[#d9c8b1] bg-[#fbf6ee] hover:border-[#5f6770] hover:bg-white/95",
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -547,7 +550,23 @@ export default function RegisterPage() {
             </div>
           ) : (
           <form onSubmit={handleSubmit(onSubmit, onFormError)}>
-            <CardContent className="space-y-5">
+            <CardContent className="space-y-6 px-6 pt-6 md:px-8">
+              <div className="rounded-[1.9rem] border border-[#dcc8aa] bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(248,242,232,0.9))] p-5 shadow-[0_20px_40px_-34px_rgba(15,23,42,0.42)] sm:p-6">
+                <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-[0.7rem] font-semibold uppercase tracking-[0.26em] text-[#49616d]">
+                      Your Details
+                    </p>
+                    <h2 className="mt-2 text-2xl font-heading text-[#17212b]">
+                      Patient information
+                    </h2>
+                  </div>
+                  <p className="max-w-xl text-sm leading-6 text-[#60707d]">
+                    Fill in your profile once so appointments, prescriptions,
+                    and records stay linked correctly.
+                  </p>
+                </div>
+                <div className="grid gap-5 lg:grid-cols-2 xl:gap-6">
               {/* Personal Information Section */}
               <div className="space-y-2">
                 <Label
@@ -561,7 +580,7 @@ export default function RegisterPage() {
                   id="name"
                   type="text"
                   placeholder="John Doe"
-                  className="h-11 border-input focus:border-primary focus:ring-primary"
+                  className={fieldClassName}
                   {...register("name")}
                   disabled={loading}
                 />
@@ -584,7 +603,7 @@ export default function RegisterPage() {
                   id="email"
                   type="email"
                   placeholder="you@example.com"
-                  className="h-11 border-input focus:border-primary focus:ring-primary"
+                  className={fieldClassName}
                   {...register("email")}
                   disabled={loading}
                 />
@@ -604,14 +623,14 @@ export default function RegisterPage() {
                   Phone Number
                 </Label>
                 <div className="flex">
-                  <span className="inline-flex items-center px-3 h-11 text-sm text-foreground bg-muted border border-r-0 border-input rounded-l-md font-medium">
+                  <span className="inline-flex h-12 items-center rounded-l-2xl border border-r-0 border-[#d8c5a8] bg-[#f4ebde] px-3 text-sm font-medium text-foreground">
                     +91
                   </span>
                   <Input
                     id="phone"
                     type="tel"
                     placeholder="9876543210"
-                    className="h-11 border-input focus:border-primary focus:ring-primary rounded-l-none"
+                    className={`${fieldClassName} rounded-l-none`}
                     {...register("phone", {
                       setValueAs: (v) =>
                         v && !v.startsWith("+91")
@@ -641,7 +660,7 @@ export default function RegisterPage() {
                         variant="outline"
                         disabled={loading}
                         className={cn(
-                          "h-11 w-full justify-start text-left font-normal border-input",
+                          "h-12 w-full justify-start rounded-2xl border-[#d8c5a8] bg-white/88 text-left font-normal shadow-[0_10px_24px_-22px_rgba(15,23,42,0.45)] focus:border-primary focus:ring-primary",
                           !dobDate && "text-muted-foreground",
                         )}
                       >
@@ -696,7 +715,7 @@ export default function RegisterPage() {
                   >
                     <SelectTrigger
                       id="gender"
-                      className="h-11 border-input focus:border-primary focus:ring-primary"
+                      className="h-12 rounded-2xl border-[#d8c5a8] bg-white/88 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.45)] focus:border-primary focus:ring-primary"
                     >
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
@@ -714,7 +733,7 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 lg:col-span-2">
                 <Label
                   htmlFor="address"
                   className="text-foreground font-medium flex items-center gap-2"
@@ -726,7 +745,7 @@ export default function RegisterPage() {
                   id="address"
                   type="text"
                   placeholder="123 Main St, City, State, ZIP"
-                  className="h-11 border-input focus:border-primary focus:ring-primary"
+                  className={fieldClassName}
                   {...register("address")}
                   disabled={loading}
                 />
@@ -746,14 +765,14 @@ export default function RegisterPage() {
                   Emergency Contact Number
                 </Label>
                 <div className="flex">
-                  <span className="inline-flex items-center px-3 h-11 text-sm text-foreground bg-muted border border-r-0 border-input rounded-l-md font-medium">
+                  <span className="inline-flex h-12 items-center rounded-l-2xl border border-r-0 border-[#d8c5a8] bg-[#f4ebde] px-3 text-sm font-medium text-foreground">
                     +91
                   </span>
                   <Input
                     id="emergencyContact"
                     type="tel"
                     placeholder="9876543210"
-                    className="h-11 border-input focus:border-primary focus:ring-primary rounded-l-none"
+                    className={`${fieldClassName} rounded-l-none`}
                     {...register("emergencyContact", {
                       setValueAs: (v) =>
                         v && !v.startsWith("+91")
@@ -782,7 +801,7 @@ export default function RegisterPage() {
                   id="bloodGroup"
                   type="text"
                   placeholder="e.g., A+, O-, B+"
-                  className="h-11 border-input focus:border-primary focus:ring-primary"
+                  className={fieldClassName}
                   {...register("bloodGroup")}
                   disabled={loading}
                 />
@@ -793,7 +812,7 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 lg:col-span-2">
                 <Label
                   htmlFor="password"
                   className="text-foreground font-medium flex items-center gap-2"
@@ -806,7 +825,7 @@ export default function RegisterPage() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="h-11 border-input focus:border-primary focus:ring-primary pr-10"
+                    className={`${fieldClassName} pr-10`}
                     {...register("password")}
                     disabled={loading}
                   />
@@ -828,17 +847,30 @@ export default function RegisterPage() {
                   </p>
                 )}
               </div>
+                </div>
+              </div>
 
               {/* Doctor Selection Section */}
               <div
                 id="doctor-selection"
-                className="border-t border-border pt-6 mt-6"
+                className="rounded-[1.9rem] border border-[#dcc8aa] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(246,238,225,0.9))] p-5 shadow-[0_20px_40px_-34px_rgba(15,23,42,0.42)] sm:p-6"
               >
-                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <Stethoscope size={20} className="text-primary" />
-                  Select Your Preferred Doctor
-                  <span className="text-destructive">*</span>
-                </h3>
+                <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-[0.7rem] font-semibold uppercase tracking-[0.26em] text-[#49616d]">
+                      Care Preferences
+                    </p>
+                    <h3 className="mt-2 flex items-center gap-2 text-xl font-semibold text-foreground">
+                      <Stethoscope size={20} className="text-primary" />
+                      Select Your Preferred Doctor
+                      <span className="text-destructive">*</span>
+                    </h3>
+                  </div>
+                  <p className="max-w-xl text-sm leading-6 text-[#60707d]">
+                    Pick a speciality first, then choose the doctor you want to
+                    stay connected with for appointments and records.
+                  </p>
+                </div>
 
                 {loadingDoctors ? (
                   <div className="flex items-center justify-center py-8">
@@ -864,7 +896,7 @@ export default function RegisterPage() {
                       <button
                         type="button"
                         onClick={() => setShowAIHelper(!showAIHelper)}
-                        className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                        className="inline-flex items-center gap-2 rounded-full border border-[#cfd7d8] bg-white/88 px-4 py-2 text-sm font-medium text-primary shadow-[0_12px_28px_-24px_rgba(15,23,42,0.45)] transition-colors hover:border-primary/40 hover:text-primary/80"
                       >
                         <Sparkles size={16} />
                         {showAIHelper
@@ -882,7 +914,7 @@ export default function RegisterPage() {
 
                     {/* AI Symptom Input */}
                     {showAIHelper && (
-                      <div className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 mb-4">
+                      <div className="mb-4 rounded-[1.4rem] border border-primary/20 bg-[linear-gradient(180deg,rgba(61,122,122,0.08),rgba(255,255,255,0.92))] p-4 shadow-[0_16px_32px_-26px_rgba(61,122,122,0.24)]">
                         <div className="flex items-center gap-2 mb-3">
                           <Sparkles className="h-5 w-5 text-primary" />
                           <span className="font-semibold text-primary">
@@ -897,7 +929,7 @@ export default function RegisterPage() {
                           value={symptoms}
                           onChange={(e) => setSymptoms(e.target.value)}
                           placeholder="e.g., I have been experiencing headaches and dizziness for the past week..."
-                          className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
+                          className="w-full rounded-2xl border border-[#c8d7d7] bg-white px-4 py-3 text-sm placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
                           rows={3}
                           disabled={loading || loadingAI}
                         />
@@ -980,7 +1012,7 @@ export default function RegisterPage() {
                     )}
 
                     {/* Speciality Selection */}
-                    <div className="space-y-3 mb-4">
+                    <div className="mb-4 space-y-3">
                       <Label className="text-foreground font-medium">
                         Select Speciality
                       </Label>
@@ -994,10 +1026,10 @@ export default function RegisterPage() {
                               setSelectedDoctor("");
                             }}
                             className={cn(
-                              "px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all",
+                              "rounded-full border px-4 py-2.5 text-sm font-medium transition-all",
                               selectedSpeciality === spec
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-border hover:border-primary/50",
+                                ? "border-primary bg-primary/10 text-primary shadow-[0_12px_24px_-20px_rgba(61,122,122,0.55)]"
+                                : "border-[#d5c4ab] bg-white/82 text-[#43515d] hover:border-primary/50",
                             )}
                           >
                             {spec}
@@ -1019,16 +1051,16 @@ export default function RegisterPage() {
                             </p>
                           </div>
                         ) : (
-                          <div className="space-y-2">
+                          <div className="grid gap-3 lg:grid-cols-2">
                             {filteredDoctors.map((doctor) => (
                               <div
                                 key={doctor.id}
                                 onClick={() => setSelectedDoctor(doctor.id)}
                                 className={cn(
-                                  "p-4 rounded-lg border-2 transition-all cursor-pointer",
+                                  "cursor-pointer rounded-[1.35rem] border p-4 transition-all",
                                   selectedDoctor === doctor.id
-                                    ? "border-green-500 bg-green-50"
-                                    : "border-border hover:border-primary/50",
+                                    ? "border-[#5ea276] bg-[linear-gradient(180deg,rgba(234,252,239,1),rgba(244,252,246,0.96))] shadow-[0_18px_34px_-24px_rgba(94,162,118,0.38)]"
+                                    : "border-[#d8c5a8] bg-white/86 hover:border-primary/50 hover:shadow-[0_16px_30px_-26px_rgba(15,23,42,0.35)]",
                                 )}
                               >
                                 <div className="flex items-center justify-between">
@@ -1080,7 +1112,7 @@ export default function RegisterPage() {
                                       <Badge
                                         key={i}
                                         variant="secondary"
-                                        className="text-xs"
+                                        className="rounded-full border border-black/5 bg-[#f5eee3] text-xs text-[#4a5864]"
                                       >
                                         {degree}
                                       </Badge>
@@ -1097,7 +1129,7 @@ export default function RegisterPage() {
                     {/* Selected Doctor Confirmation */}
                     {selectedDoctor && (
                       <>
-                        <div className="mt-4 p-3 rounded-lg bg-green-50 border border-green-200">
+                        <div className="mt-4 rounded-[1.2rem] border border-green-200 bg-green-50 p-4">
                           <p className="text-sm text-green-800 flex items-center gap-2">
                             <Stethoscope size={16} />
                             Selected:{" "}
@@ -1134,8 +1166,8 @@ export default function RegisterPage() {
               </div>
             </CardContent>
 
-            <CardFooter className="flex flex-col space-y-4 pt-2">
-              <div className="w-full rounded-lg border border-border bg-muted/30 p-3">
+            <CardFooter className="mt-6 flex flex-col space-y-5 border-t border-[#dcc8aa] bg-[linear-gradient(180deg,rgba(255,251,245,0.98),rgba(245,237,223,0.9))] px-6 py-6 shadow-[0_-1px_0_rgba(255,255,255,0.72)_inset] md:px-8 md:py-7">
+              <div className="w-full rounded-[1.1rem] border border-[#d9c4a4] bg-white/78 p-4 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.32),0_1px_0_rgba(255,255,255,0.7)_inset]">
                 {captchaSiteKey ? (
                   <HCaptcha
                     sitekey={captchaSiteKey}
@@ -1149,14 +1181,16 @@ export default function RegisterPage() {
                   </div>
                 )}
               </div>
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full h-12 text-base font-semibold"
-                disabled={loading || !selectedDoctor || !captchaSiteKey}
-              >
-                {loading ? "Creating account..." : "Create your account"}
-              </Button>
+              <div className="w-full rounded-[1.2rem] border border-[#dcc8aa] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(246,238,224,0.96))] p-3 shadow-[0_18px_34px_-28px_rgba(15,23,42,0.28),0_1px_0_rgba(255,255,255,0.82)_inset]">
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="h-13 w-full rounded-[1rem] border border-[#c7b08a] bg-[linear-gradient(180deg,#203645_0%,#152633_100%)] text-base font-semibold text-white shadow-[0_18px_30px_-24px_rgba(15,23,42,0.9),0_1px_0_rgba(255,255,255,0.08)_inset] transition-all hover:-translate-y-0.5 hover:border-[#b79b6f] hover:bg-[linear-gradient(180deg,#274152_0%,#182a37_100%)] active:translate-y-0 disabled:border-[#d8ccb8] disabled:bg-[linear-gradient(180deg,#efe7d8_0%,#e4d8c4_100%)] disabled:text-[#8a7f6b] disabled:shadow-none"
+                  disabled={loading || !selectedDoctor || !captchaSiteKey}
+                >
+                  {loading ? "Creating account..." : "Create your account"}
+                </Button>
+              </div>
               <p className="text-center text-sm text-muted-foreground">
                 Already have an account?{" "}
                 <Link

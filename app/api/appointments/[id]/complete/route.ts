@@ -182,7 +182,9 @@ export async function POST(
       const billingData = {
         patientEmail: appointment.patient.user.email,
         patientName: appointment.patient.user.name,
+        patientPublicId: appointment.patient.publicId,
         doctorName: doctor?.name || "Doctor",
+        doctorPublicId: doctorProfile?.publicId || undefined,
         doctorSpeciality: doctorProfile?.speciality || "General Physician",
         appointmentDate: format(
           new Date(appointment.appointmentDate),

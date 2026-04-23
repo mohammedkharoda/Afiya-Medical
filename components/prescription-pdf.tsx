@@ -153,6 +153,8 @@ interface PrescriptionData {
   createdAt: string;
   followUpDate?: string;
   doctorName?: string;
+  doctorPublicId?: string | null;
+  patientPublicId?: string | null;
   attachmentUrl?: string;
   medications: Medication[];
 }
@@ -182,10 +184,7 @@ export const PrescriptionPDF = ({ prescription }: PrescriptionPDFProps) => (
     <Page size="A4" style={styles.page}>
       {/* Header with Logo */}
       <View style={styles.header}>
-        <Image
-          style={styles.logo}
-          src={APP_LOGO_URL}
-        />
+        <Image style={styles.logo} src={APP_LOGO_URL} />
         <Text style={styles.clinicName}>Afiya Medical Clinic</Text>
         <Text style={styles.subtitle}>Medical Prescription</Text>
       </View>
@@ -205,6 +204,18 @@ export const PrescriptionPDF = ({ prescription }: PrescriptionPDFProps) => (
             {prescription.doctorName || "Dr. N/A"}
           </Text>
         </View>
+        {prescription.doctorPublicId ? (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Doctor ID:</Text>
+            <Text style={styles.infoValue}>{prescription.doctorPublicId}</Text>
+          </View>
+        ) : null}
+        {prescription.patientPublicId ? (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Patient ID:</Text>
+            <Text style={styles.infoValue}>{prescription.patientPublicId}</Text>
+          </View>
+        ) : null}
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Diagnosis:</Text>
           <Text style={styles.infoValue}>{prescription.diagnosis}</Text>

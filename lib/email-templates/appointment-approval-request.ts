@@ -2,6 +2,7 @@
 
 import { EMAIL_CONFIG } from "./config";
 import { getEmailWrapper, getEmailHeader, getEmailFooter } from "./layout";
+import { getReferenceBlock } from "./reference";
 
 const { primaryColor, warningColor, textSecondary, bgLight, bgWarning } =
   EMAIL_CONFIG;
@@ -12,6 +13,8 @@ interface AppointmentApprovalRequestTemplateData {
   date: string;
   time: string;
   symptoms: string;
+  doctorPublicId?: string;
+  patientPublicId?: string;
   clinicName: string;
   clinicAddress?: string;
 }
@@ -27,7 +30,8 @@ export const getAppointmentApprovalRequestTemplate = ({
   date,
   time,
   symptoms,
-  clinicName,
+  doctorPublicId,
+  patientPublicId,
   clinicAddress,
 }: AppointmentApprovalRequestTemplateData): string => {
   return getEmailWrapper(`
@@ -55,6 +59,7 @@ export const getAppointmentApprovalRequestTemplate = ({
         <p style="margin: 0; color: #991b1b;"><strong>Action Required:</strong></p>
         <p style="margin: 8px 0 0 0; color: #991b1b;">Please log in to your dashboard to approve or decline this appointment request.</p>
       </div>
+      ${getReferenceBlock({ doctorPublicId, patientPublicId })}
     </div>
     ${getEmailFooter({ address: clinicAddress })}
   `);

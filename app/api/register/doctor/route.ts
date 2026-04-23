@@ -10,6 +10,8 @@ import { eq, ilike } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { doctorRegisterSchema } from "@/lib/validations/auth";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
+import { sendDoctorVerificationRequestEmail } from "@/lib/email";
+import { getAppBaseUrl } from "@/lib/app-url";
 
 export async function POST(req: NextRequest) {
   try {
@@ -156,6 +158,20 @@ export async function POST(req: NextRequest) {
       })
       .where(eq(doctorInvitations.id, invitation.id));
 
+    sendDoctorVerificationRequestEmail({
+      doctorName: name,
+      doctorEmail: email,
+      doctorPhone: phoneE164,
+      speciality,
+      registrationNumber,
+      reviewUrl: `${getAppBaseUrl(req)}/admin/invitations`,
+    }).catch((emailError) =>
+      console.error(
+        "Failed to send admin doctor verification notification:",
+        emailError,
+      ),
+    );
+
     return NextResponse.json({
       success: true,
       message:
@@ -173,9 +189,12 @@ export async function POST(req: NextRequest) {
       "name" in error &&
       error.name === "ZodError"
     ) {
-      const zodError = error as { errors?: Array<{ message: string }> };
+      const zodError = error as { issues?: Array<{ message: string }> };
       return NextResponse.json(
-        { error: "Invalid input data", details: zodError.errors },
+        {
+          error: zodError.issues?.[0]?.message || "Invalid input data",
+          details: zodError.issues,
+        },
         { status: 400 },
       );
     }

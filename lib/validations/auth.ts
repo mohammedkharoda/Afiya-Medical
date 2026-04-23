@@ -4,6 +4,14 @@ import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 // List of disposable/temporary email domains to block
 const BASE_DISPOSABLE_EMAIL_DOMAINS = [
+  "1secmail.com",
+  "1secmail.net",
+  "1secmail.org",
+  "20minutemail.com",
+  "dropmail.me",
+  "dropmail.org",
+  "dropmail.info",
+  "emailnator.com",
   "tempmail.com",
   "temp-mail.org",
   "guerrillamail.com",
@@ -47,6 +55,10 @@ const BASE_DISPOSABLE_EMAIL_DOMAINS = [
   "mailcatch.com",
   "mailforspam.com",
   "mailnator.com",
+  "mailpoof.com",
+  "mailtemp.net",
+  "passmail.net",
+  "passmail.com",
   "spambox.us",
   "spamfree24.org",
   "wegwerfmail.de",
@@ -65,8 +77,17 @@ const BASE_DISPOSABLE_EMAIL_DOMAINS = [
   "tempemail.net",
 ];
 
+const EXTRA_DISPOSABLE_EMAIL_DOMAINS = (
+  process.env.DISPOSABLE_EMAIL_DOMAINS || ""
+)
+  .split(",")
+  .map((domain) => domain.trim().toLowerCase())
+  .filter(Boolean);
+
 const DISPOSABLE_DOMAIN_SET = new Set(
-  BASE_DISPOSABLE_EMAIL_DOMAINS.map((domain) => domain.toLowerCase()),
+  [...BASE_DISPOSABLE_EMAIL_DOMAINS, ...EXTRA_DISPOSABLE_EMAIL_DOMAINS].map(
+    (domain) => domain.toLowerCase(),
+  ),
 );
 
 const isDisposableDomain = (domain?: string) => {

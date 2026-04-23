@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Loader2,
   User as UserIcon,
-  Heart,
   BriefcaseMedical,
 } from "lucide-react";
 import {
@@ -27,6 +26,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Patient {
   id: string;
+  publicId?: string;
   name: string;
   email: string;
   phone?: string;
@@ -73,7 +73,8 @@ export default function PatientsPage() {
         (patient) =>
           patient.name.toLowerCase().includes(query) ||
           patient.email.toLowerCase().includes(query) ||
-          patient.phone?.toLowerCase().includes(query),
+          patient.phone?.toLowerCase().includes(query) ||
+          patient.publicId?.toLowerCase().includes(query),
       );
       setFilteredPatients(filtered);
     }
@@ -172,6 +173,11 @@ export default function PatientsPage() {
                           <p className="font-semibold text-foreground truncate text-base mb-1">
                             {patient.name}
                           </p>
+                          {patient.publicId ? (
+                            <p className="mb-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                              {patient.publicId}
+                            </p>
+                          ) : null}
                           <div className="flex items-center gap-1.5">
                             {patient.bloodGroup && (
                               <Badge

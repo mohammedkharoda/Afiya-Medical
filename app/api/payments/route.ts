@@ -4,12 +4,10 @@ import {
   patientProfiles,
   payments,
   appointments,
-  prescriptions,
-  medications,
   users,
   doctorProfiles,
 } from "@/lib/db";
-import { eq, desc, or, and, inArray } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 import { getSession } from "@/lib/session";
 import { sendPrescriptionEmail, sendBillingEmail } from "@/lib/email";
 import { format } from "date-fns";
@@ -208,7 +206,9 @@ export async function POST(req: NextRequest) {
         sendBillingEmail({
           patientEmail: appointment.patient.user.email,
           patientName: appointment.patient.user.name,
+          patientPublicId: appointment.patient.publicId,
           doctorName: doctor?.name || "Doctor",
+          doctorPublicId: docProfile?.publicId || undefined,
           doctorSpeciality: docProfile?.speciality || "General Physician",
           appointmentDate: format(
             new Date(appointment.appointmentDate),
@@ -305,6 +305,7 @@ export async function PATCH(req: NextRequest) {
           ? await db.query.doctorProfiles.findFirst({
               where: eq(doctorProfiles.userId, doctorId),
               columns: {
+                publicId: true,
                 clinicAddress: true,
               },
             })
@@ -323,7 +324,9 @@ export async function PATCH(req: NextRequest) {
         sendPrescriptionEmail({
           patientEmail: appointment.patient.user.email,
           patientName: appointment.patient.user.name,
+          patientPublicId: appointment.patient.publicId,
           doctorName: doctor?.name || "Doctor",
+          doctorPublicId: doctorProfile?.publicId || undefined,
           diagnosis: appointment.prescription.diagnosis,
           medications: appointment.prescription.medications.map((med) => ({
             medicineName: med.medicineName,

@@ -2,6 +2,7 @@
 
 import { EMAIL_CONFIG } from "./config";
 import { getEmailWrapper, getEmailHeader, getEmailFooter } from "./layout";
+import { getReferenceBlock } from "./reference";
 
 const { primaryColor, warningColor, textSecondary, bgLight, bgWarning } =
   EMAIL_CONFIG;
@@ -12,6 +13,8 @@ interface NewAppointmentAlertTemplateData {
   date: string;
   time: string;
   symptoms: string;
+  doctorPublicId?: string;
+  patientPublicId?: string;
   clinicAddress?: string;
 }
 
@@ -29,6 +32,8 @@ export const getNewAppointmentAlertTemplate = ({
   date,
   time,
   symptoms,
+  doctorPublicId,
+  patientPublicId,
   clinicAddress,
 }: NewAppointmentAlertTemplateData): string => {
   return getEmailWrapper(`
@@ -50,6 +55,7 @@ export const getNewAppointmentAlertTemplate = ({
         <p style="margin: 0;"><strong>Symptoms/Reason:</strong></p>
         <p style="margin: 8px 0 0 0; color: ${textSecondary};">${symptoms}</p>
       </div>
+      ${getReferenceBlock({ doctorPublicId, patientPublicId })}
     </div>
     ${getEmailFooter({ address: clinicAddress })}
   `);

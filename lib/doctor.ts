@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 interface DoctorInfo {
   id: string;
+  publicId?: string | null;
   name: string;
   email: string;
   phone: string | null;
@@ -10,6 +11,7 @@ interface DoctorInfo {
 }
 
 export interface DoctorFullInfo extends DoctorInfo {
+  publicId: string | null;
   speciality: string;
   upiId: string | null;
   clinicAddress: string | null;
@@ -42,12 +44,14 @@ export async function getDoctor(): Promise<DoctorInfo | null> {
     const profile = await db.query.doctorProfiles.findFirst({
       where: eq(doctorProfiles.userId, doctor.id),
       columns: {
+        publicId: true,
         clinicAddress: true,
       },
     });
 
     cachedDoctor = {
       id: doctor.id,
+      publicId: profile?.publicId || null,
       name: doctor.name,
       email: doctor.email,
       phone: doctor.phone,
@@ -83,6 +87,7 @@ export async function getDoctorById(
     where: eq(doctorProfiles.userId, doctorId),
     columns: {
       speciality: true,
+      publicId: true,
       upiId: true,
       clinicAddress: true,
     },
@@ -90,6 +95,7 @@ export async function getDoctorById(
 
   return {
     id: doctor.id,
+    publicId: profile?.publicId || null,
     name: doctor.name,
     email: doctor.email,
     phone: doctor.phone,

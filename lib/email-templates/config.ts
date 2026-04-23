@@ -1,11 +1,10 @@
-import { APP_LOGO_URL } from "@/lib/logo";
-
 // Email template configuration - Edit these values to customize your emails
 
 export const EMAIL_CONFIG = {
   // Branding
+  brandName: "afiya",
+  brandTagline: "Where wellness is priority",
   clinicName: "Afiya Medical Clinic",
-  logoUrl: APP_LOGO_URL,
   address:
     "M/43 Joshi Gali, Near Diamond Medical Store, Khaiwala Tank Road, Indore - M.P. 452014",
 

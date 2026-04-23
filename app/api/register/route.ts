@@ -179,18 +179,35 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 },
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Registration error:", error);
 
-    if (error.name === "ZodError") {
+    if (
+      error &&
+      typeof error === "object" &&
+      "name" in error &&
+      error.name === "ZodError"
+    ) {
+      const zodError = error as { issues?: Array<{ message?: string }> };
+      const firstIssue =
+        Array.isArray(zodError.issues) && zodError.issues.length > 0
+          ? zodError.issues[0]?.message
+          : "Invalid input data";
       return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
+        { error: firstIssue, details: zodError.issues },
         { status: 400 },
       );
     }
 
     // Handle database constraint errors
-    if (error.code === "23503" || error.message?.includes("foreign key")) {
+    if (
+      error &&
+      typeof error === "object" &&
+      (("code" in error && error.code === "23503") ||
+        ("message" in error &&
+          typeof error.message === "string" &&
+          error.message.includes("foreign key")))
+    ) {
       return NextResponse.json(
         {
           error: "Selected doctor is not valid. Please refresh and try again.",
@@ -200,8 +217,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (
-      error.code === "23505" ||
-      error.message?.includes("unique constraint")
+      error &&
+      typeof error === "object" &&
+      (("code" in error && error.code === "23505") ||
+        ("message" in error &&
+          typeof error.message === "string" &&
+          error.message.includes("unique constraint")))
     ) {
       return NextResponse.json(
         { error: "User with this email already exists" },

@@ -2,6 +2,7 @@
 
 import { EMAIL_CONFIG } from "./config";
 import { getEmailWrapper, getEmailHeader, getEmailFooter } from "./layout";
+import { getReferenceBlock } from "./reference";
 
 const {
   clinicName,
@@ -25,6 +26,8 @@ interface Medication {
 interface PrescriptionTemplateData {
   patientName: string;
   doctorName: string;
+  doctorPublicId?: string;
+  patientPublicId?: string;
   diagnosis: string;
   medications: Medication[];
   notes?: string;
@@ -61,6 +64,8 @@ const getMedicationsList = (medications: Medication[]): string => {
 export const getPrescriptionTemplate = ({
   patientName,
   doctorName,
+  doctorPublicId,
+  patientPublicId,
   diagnosis,
   medications,
   notes,
@@ -137,8 +142,9 @@ export const getPrescriptionTemplate = ({
           <strong>⚠️ Important:</strong> Follow the medication schedule as prescribed. Contact your doctor if you experience any adverse effects.
         </p>
       </div>
+      ${getReferenceBlock({ doctorPublicId, patientPublicId })}
     </div>
-    ${getEmailFooter({ address: clinicAddress })}
+    ${getEmailFooter({ address: clinicAddress, showAddress: true })}
   `);
 };
 

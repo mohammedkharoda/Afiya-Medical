@@ -73,6 +73,7 @@ export async function GET(
     return NextResponse.json({
       patient: {
         id: patientProfile.id,
+        publicId: patientProfile.publicId,
         user: {
           id: patientProfile.user.id,
           name: patientProfile.user.name,

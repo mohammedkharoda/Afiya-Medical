@@ -34,11 +34,14 @@ export async function GET(req: NextRequest) {
     }
 
     // For patients, fetch their preferred doctor information
+    let patientProfile = null;
     let preferredDoctor = null;
     if (user.role === "PATIENT") {
-      const patientProfile = await db.query.patientProfiles.findFirst({
+      patientProfile = await db.query.patientProfiles.findFirst({
         where: eq(patientProfiles.userId, user.id),
         columns: {
+          id: true,
+          publicId: true,
           preferredDoctorId: true,
         },
       });
@@ -48,6 +51,7 @@ export async function GET(req: NextRequest) {
         const doctor = await db
           .select({
             id: users.id,
+            publicId: doctorProfiles.publicId,
             name: users.name,
             speciality: doctorProfiles.speciality,
           })
@@ -68,6 +72,7 @@ export async function GET(req: NextRequest) {
       const profile = await db.query.doctorProfiles.findFirst({
         where: eq(doctorProfiles.userId, user.id),
         columns: {
+          publicId: true,
           speciality: true,
           degrees: true,
           experience: true,
@@ -81,7 +86,16 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ user, preferredDoctor, doctorProfile });
+    return NextResponse.json({
+      user: {
+        ...user,
+        patientPublicId: patientProfile?.publicId ?? null,
+        doctorPublicId: doctorProfile?.publicId ?? null,
+      },
+      patientProfile,
+      preferredDoctor,
+      doctorProfile,
+    });
   } catch (error) {
     console.error("Error fetching current user:", error);
     return NextResponse.json(

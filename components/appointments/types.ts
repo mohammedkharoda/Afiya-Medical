@@ -27,10 +27,12 @@ export interface Appointment {
   prescriptionWithheld?: boolean;
   doctorId?: string;
   doctorName?: string | null;
+  doctorPublicId?: string | null;
   doctorUpiId?: string | null;
   doctorUpiQrCode?: string | null;
   patient?: {
     id?: string;
+    publicId?: string;
     address?: string;
     user?: {
       name?: string;
@@ -78,9 +80,12 @@ export interface UserData {
   email: string;
   name: string;
   role?: UserRole;
+  patientPublicId?: string | null;
+  doctorPublicId?: string | null;
 }
 
 export interface DoctorProfile {
+  publicId: string;
   speciality: string;
   degrees: string[];
   experience: number | null;

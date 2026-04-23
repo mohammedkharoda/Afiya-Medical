@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   db,
   patientProfiles,
+  doctorProfiles,
   prescriptions,
   medications,
   appointments,
-  medicalDocuments,
   users,
 } from "@/lib/db";
 import { eq, desc } from "drizzle-orm";
@@ -53,17 +53,27 @@ export async function GET(req: NextRequest) {
       const enrichedPrescriptions = await Promise.all(
         prescriptionsList.map(async (p) => {
           let doctorName = "Dr. Health";
+          let doctorPublicId: string | null = null;
           if (p.appointment?.doctorId) {
             const doctor = await db.query.users.findFirst({
               where: eq(users.id, p.appointment.doctorId),
             });
+            const doctorProfile = await db.query.doctorProfiles.findFirst({
+              where: eq(doctorProfiles.userId, p.appointment.doctorId),
+              columns: {
+                publicId: true,
+              },
+            });
             if (doctor) {
               doctorName = doctor.name;
             }
+            doctorPublicId = doctorProfile?.publicId || null;
           }
           return {
             ...p,
             doctorName,
+            doctorPublicId,
+            patientPublicId: patientProfile.publicId,
           };
         }),
       );
@@ -89,17 +99,27 @@ export async function GET(req: NextRequest) {
       const enrichedPrescriptions = await Promise.all(
         prescriptionsList.map(async (p) => {
           let doctorName = "Dr. Health";
+          let doctorPublicId: string | null = null;
           if (p.appointment?.doctorId) {
             const doctor = await db.query.users.findFirst({
               where: eq(users.id, p.appointment.doctorId),
             });
+            const doctorProfile = await db.query.doctorProfiles.findFirst({
+              where: eq(doctorProfiles.userId, p.appointment.doctorId),
+              columns: {
+                publicId: true,
+              },
+            });
             if (doctor) {
               doctorName = doctor.name;
             }
+            doctorPublicId = doctorProfile?.publicId || null;
           }
           return {
             ...p,
             doctorName,
+            doctorPublicId,
+            patientPublicId: p.appointment?.patient?.publicId || null,
           };
         }),
       );
@@ -156,6 +176,14 @@ export async function POST(req: NextRequest) {
       attachmentPublicId,
     } = body;
 
+    type MedicationInput = {
+      medicineName: string;
+      dosage: string;
+      frequency: string;
+      duration: string;
+      instructions?: string;
+    };
+
     // Get appointment to get patientId, doctorId, and patient user info
     const appointment = await db.query.appointments.findFirst({
       where: eq(appointments.id, appointmentId),
@@ -191,7 +219,7 @@ export async function POST(req: NextRequest) {
     // Create medications
     if (medicationsList && medicationsList.length > 0) {
       await db.insert(medications).values(
-        medicationsList.map((med: any) => ({
+        (medicationsList as MedicationInput[]).map((med) => ({
           prescriptionId: prescription.id,
           medicineName: med.medicineName,
           dosage: med.dosage,
@@ -247,14 +275,25 @@ export async function POST(req: NextRequest) {
       { prescription: prescriptionWithMeds },
       { status: 201 },
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating prescription:", error);
 
     // Check for unique constraint violation
     if (
-      error.code === "23505" ||
-      error.message?.includes("unique") ||
-      error.message?.includes("duplicate")
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "23505"
+    ) {
+      return NextResponse.json(
+        { error: "A prescription already exists for this appointment" },
+        { status: 409 },
+      );
+    }
+
+    if (
+      error instanceof Error &&
+      (error.message.includes("unique") || error.message.includes("duplicate"))
     ) {
       return NextResponse.json(
         { error: "A prescription already exists for this appointment" },

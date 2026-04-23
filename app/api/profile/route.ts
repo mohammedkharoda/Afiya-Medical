@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
         columns: {
           id: true,
           userId: true,
+          publicId: true,
           dob: true,
           gender: true,
           bloodGroup: true,
@@ -134,6 +135,7 @@ export async function PATCH(req: NextRequest) {
           columns: {
             id: true,
             userId: true,
+            publicId: true,
             dob: true,
             gender: true,
             bloodGroup: true,
@@ -158,6 +160,7 @@ export async function PATCH(req: NextRequest) {
         patientProfile = {
           id: newProfile.id,
           userId: newProfile.userId,
+          publicId: newProfile.publicId,
           dob: newProfile.dob,
           gender: newProfile.gender,
           bloodGroup: newProfile.bloodGroup,

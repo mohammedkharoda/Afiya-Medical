@@ -9,15 +9,12 @@ import {
   Phone,
   Calendar,
   MapPin,
-  Heart,
   AlertCircle,
   Pill,
   FileText,
   Clock,
   Activity,
-  TrendingUp,
   CheckCircle,
-  XCircle,
   Loader2,
   Stethoscope,
   HeartPulse,
@@ -41,6 +38,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface PatientDetails {
   id: string;
+  publicId?: string;
   user: {
     id: string;
     name: string;
@@ -219,7 +217,9 @@ export default function PatientDetailPage({
         <div>
           <h1 className="font-heading text-2xl font-bold">Patient Details</h1>
           <p className="text-sm text-muted-foreground">
-            Comprehensive medical record and history
+            {patient.publicId
+              ? `Reference ID: ${patient.publicId}`
+              : "Comprehensive medical record and history"}
           </p>
         </div>
       </div>

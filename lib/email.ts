@@ -37,8 +37,13 @@ import {
   // Doctor invitation
   getDoctorInvitationTemplate,
   getDoctorInvitationSubject,
+  getDoctorRegistrationRequestTemplate,
+  getDoctorRegistrationRequestSubject,
+  getDoctorVerificationRequestTemplate,
+  getDoctorVerificationRequestSubject,
 } from "./email-templates";
 import { getBillingTemplate } from "./email-templates/billing";
+import { getAppBaseUrl } from "./app-url";
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -46,6 +51,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Get the from email address
 const getFromEmail = () =>
   process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+
+const getAdminNotificationEmail = () =>
+  process.env.ADMIN_NOTIFICATION_EMAIL || "kharodawalam@gmail.com";
 
 // ============================================================================
 // EMAIL VERIFICATION
@@ -132,6 +140,11 @@ export async function sendSignupNotificationEmail(
 // OTP VERIFICATION
 // ============================================================================
 
+interface EmailReferenceDetails {
+  doctorPublicId?: string;
+  patientPublicId?: string;
+}
+
 export async function sendOtpEmail(email: string, otp: string) {
   try {
     console.log(`[sendOtpEmail] Attempting to send OTP to ${email}`);
@@ -171,6 +184,7 @@ export async function sendAppointmentConfirmationEmail(
   doctorName: string,
   clinicName: string,
   clinicAddress?: string,
+  references?: EmailReferenceDetails,
 ) {
   try {
     const result = await resend.emails.send({
@@ -182,6 +196,8 @@ export async function sendAppointmentConfirmationEmail(
         date,
         time,
         doctorName,
+        doctorPublicId: references?.doctorPublicId,
+        patientPublicId: references?.patientPublicId,
         clinicName,
         clinicAddress,
       }),
@@ -213,6 +229,7 @@ export async function sendNewAppointmentAlertEmail(
   symptoms: string,
   clinicName: string,
   clinicAddress?: string,
+  references?: EmailReferenceDetails,
 ) {
   try {
     const result = await resend.emails.send({
@@ -225,6 +242,8 @@ export async function sendNewAppointmentAlertEmail(
         date,
         time,
         symptoms,
+        doctorPublicId: references?.doctorPublicId,
+        patientPublicId: references?.patientPublicId,
         clinicAddress,
       }),
     });
@@ -254,6 +273,7 @@ export async function sendAppointmentStatusEmail(
   time: string,
   _clinicName: string,
   clinicAddress?: string,
+  references?: EmailReferenceDetails,
 ) {
   try {
     const result = await resend.emails.send({
@@ -265,6 +285,8 @@ export async function sendAppointmentStatusEmail(
         status,
         date,
         time,
+        doctorPublicId: references?.doctorPublicId,
+        patientPublicId: references?.patientPublicId,
         clinicAddress,
       }),
     });
@@ -294,6 +316,7 @@ export async function sendAppointmentReminderEmail(
   doctorName: string,
   clinicName: string,
   clinicAddress?: string,
+  references?: EmailReferenceDetails,
 ) {
   try {
     const result = await resend.emails.send({
@@ -305,6 +328,8 @@ export async function sendAppointmentReminderEmail(
         date,
         time,
         doctorName,
+        doctorPublicId: references?.doctorPublicId,
+        patientPublicId: references?.patientPublicId,
         clinicName,
         clinicAddress,
       }),
@@ -331,6 +356,8 @@ interface PrescriptionEmailData {
   patientEmail: string;
   patientName: string;
   doctorName: string;
+  doctorPublicId?: string;
+  patientPublicId?: string;
   diagnosis: string;
   medications: Array<{
     medicineName: string;
@@ -356,6 +383,8 @@ export async function sendPrescriptionEmail(
       html: getPrescriptionTemplate({
         patientName: data.patientName,
         doctorName: data.doctorName,
+        doctorPublicId: data.doctorPublicId,
+        patientPublicId: data.patientPublicId,
         diagnosis: data.diagnosis,
         medications: data.medications,
         notes: data.notes,
@@ -393,6 +422,7 @@ export async function sendAppointmentPendingEmail(
   doctorName: string,
   clinicName: string,
   clinicAddress?: string,
+  references?: EmailReferenceDetails,
 ) {
   try {
     const result = await resend.emails.send({
@@ -404,6 +434,8 @@ export async function sendAppointmentPendingEmail(
         date,
         time,
         doctorName,
+        doctorPublicId: references?.doctorPublicId,
+        patientPublicId: references?.patientPublicId,
         clinicName,
         clinicAddress,
       }),
@@ -435,6 +467,7 @@ export async function sendAppointmentApprovalRequestEmail(
   symptoms: string,
   clinicName: string,
   clinicAddress?: string,
+  references?: EmailReferenceDetails,
 ) {
   try {
     const result = await resend.emails.send({
@@ -447,6 +480,8 @@ export async function sendAppointmentApprovalRequestEmail(
         date,
         time,
         symptoms,
+        doctorPublicId: references?.doctorPublicId,
+        patientPublicId: references?.patientPublicId,
         clinicName,
         clinicAddress,
       }),
@@ -477,6 +512,7 @@ export async function sendAppointmentApprovedEmail(
   doctorName: string,
   clinicName: string,
   clinicAddress?: string,
+  references?: EmailReferenceDetails,
 ) {
   try {
     const result = await resend.emails.send({
@@ -488,6 +524,8 @@ export async function sendAppointmentApprovedEmail(
         date,
         time,
         doctorName,
+        doctorPublicId: references?.doctorPublicId,
+        patientPublicId: references?.patientPublicId,
         clinicName,
         clinicAddress,
       }),
@@ -518,6 +556,7 @@ export async function sendAppointmentDeclinedEmail(
   reason: string | undefined,
   clinicName: string,
   clinicAddress?: string,
+  references?: EmailReferenceDetails,
 ) {
   try {
     const result = await resend.emails.send({
@@ -529,6 +568,8 @@ export async function sendAppointmentDeclinedEmail(
         date,
         time,
         reason,
+        doctorPublicId: references?.doctorPublicId,
+        patientPublicId: references?.patientPublicId,
         clinicName,
         clinicAddress,
       }),
@@ -559,6 +600,7 @@ export async function sendAppointmentCancelledByPatientEmail(
   time: string,
   reason: string,
   clinicAddress?: string,
+  references?: EmailReferenceDetails,
 ) {
   try {
     const result = await resend.emails.send({
@@ -571,6 +613,8 @@ export async function sendAppointmentCancelledByPatientEmail(
         date,
         time,
         reason,
+        doctorPublicId: references?.doctorPublicId,
+        patientPublicId: references?.patientPublicId,
         clinicAddress,
       }),
     });
@@ -624,6 +668,94 @@ export async function sendDoctorInvitationEmail(
 }
 
 // ============================================================================
+// DOCTOR REGISTRATION REQUEST (admin notification)
+// ============================================================================
+
+interface DoctorRegistrationRequestEmailData {
+  doctorEmail: string;
+  reviewUrl?: string;
+  reusedExistingInvitation?: boolean;
+}
+
+export async function sendDoctorRegistrationRequestEmail(
+  data: DoctorRegistrationRequestEmailData,
+) {
+  try {
+    const result = await resend.emails.send({
+      from: getFromEmail(),
+      to: getAdminNotificationEmail(),
+      subject: getDoctorRegistrationRequestSubject(),
+      html: getDoctorRegistrationRequestTemplate({
+        doctorEmail: data.doctorEmail,
+        reviewUrl:
+          data.reviewUrl || `${getAppBaseUrl()}/admin/invitations`,
+        reusedExistingInvitation: data.reusedExistingInvitation,
+      }),
+    });
+
+    if (result.error) {
+      console.error("Resend error:", result.error);
+      return false;
+    }
+
+    console.log(
+      `Doctor registration request email sent to ${getAdminNotificationEmail()}`,
+    );
+    return true;
+  } catch (error) {
+    console.error("Error sending doctor registration request email:", error);
+    return false;
+  }
+}
+
+// ============================================================================
+// DOCTOR VERIFICATION REQUEST (admin notification)
+// ============================================================================
+
+interface DoctorVerificationRequestEmailData {
+  doctorName: string;
+  doctorEmail: string;
+  doctorPhone: string;
+  speciality: string;
+  registrationNumber: string;
+  reviewUrl?: string;
+}
+
+export async function sendDoctorVerificationRequestEmail(
+  data: DoctorVerificationRequestEmailData,
+) {
+  try {
+    const result = await resend.emails.send({
+      from: getFromEmail(),
+      to: getAdminNotificationEmail(),
+      subject: getDoctorVerificationRequestSubject(),
+      html: getDoctorVerificationRequestTemplate({
+        doctorName: data.doctorName,
+        doctorEmail: data.doctorEmail,
+        doctorPhone: data.doctorPhone,
+        speciality: data.speciality,
+        registrationNumber: data.registrationNumber,
+        reviewUrl:
+          data.reviewUrl || `${getAppBaseUrl()}/admin/invitations`,
+      }),
+    });
+
+    if (result.error) {
+      console.error("Resend error:", result.error);
+      return false;
+    }
+
+    console.log(
+      `Doctor verification request email sent to ${getAdminNotificationEmail()}`,
+    );
+    return true;
+  } catch (error) {
+    console.error("Error sending doctor verification request email:", error);
+    return false;
+  }
+}
+
+// ============================================================================
 // BILLING EMAIL
 // ============================================================================
 
@@ -631,6 +763,8 @@ export interface BillingEmailData {
   patientEmail: string;
   patientName: string;
   doctorName: string;
+  doctorPublicId?: string;
+  patientPublicId?: string;
   doctorSpeciality: string;
   appointmentDate: string;
   appointmentTime: string;
@@ -650,6 +784,8 @@ export async function sendBillingEmail(data: BillingEmailData) {
       html: getBillingTemplate({
         patientName: data.patientName,
         doctorName: data.doctorName,
+        doctorPublicId: data.doctorPublicId,
+        patientPublicId: data.patientPublicId,
         doctorSpeciality: data.doctorSpeciality,
         appointmentDate: data.appointmentDate,
         appointmentTime: data.appointmentTime,

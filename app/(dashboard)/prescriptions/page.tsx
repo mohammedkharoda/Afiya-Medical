@@ -39,6 +39,8 @@ interface Prescription {
   createdAt: string;
   followUpDate?: string;
   doctorName?: string;
+  doctorPublicId?: string | null;
+  patientPublicId?: string | null;
   attachmentUrl?: string;
   medications: Medication[];
   appointment?: {
@@ -205,6 +207,20 @@ export default function PrescriptionsPage() {
                         {prescription.doctorName || "Dr. N/A"}
                       </span>
                     </div>
+                    {(prescription.doctorPublicId || prescription.patientPublicId) ? (
+                      <p className="mt-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                        {prescription.doctorPublicId
+                          ? `Doctor ID: ${prescription.doctorPublicId}`
+                          : ""}
+                        {prescription.doctorPublicId &&
+                        prescription.patientPublicId
+                          ? " | "
+                          : ""}
+                        {prescription.patientPublicId
+                          ? `Patient ID: ${prescription.patientPublicId}`
+                          : ""}
+                      </p>
+                    ) : null}
                   </CardHeader>
 
                   <CardContent className="pl-6 pb-6 flex-1 flex flex-col gap-4">

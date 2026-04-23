@@ -7,6 +7,8 @@ interface UserData {
   email: string;
   name: string;
   role?: UserRole;
+  patientPublicId?: string | null;
+  doctorPublicId?: string | null;
   phone?: string;
   image?: string;
 }

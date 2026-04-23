@@ -1,11 +1,15 @@
 // Appointment Status Update Email Template
 
 import { EMAIL_CONFIG } from "./config";
-import { getEmailWrapper, getEmailFooter } from "./layout";
+import {
+  getEmailBrandBlock,
+  getEmailFooter,
+  getEmailWrapper,
+} from "./layout";
+import { getReferenceBlock } from "./reference";
 
 const {
   clinicName,
-  logoUrl,
   primaryColor,
   successColor,
   errorColor,
@@ -20,6 +24,8 @@ interface AppointmentStatusTemplateData {
   status: "COMPLETED" | "CANCELLED" | "RESCHEDULED" | string;
   date: string;
   time: string;
+  doctorPublicId?: string;
+  patientPublicId?: string;
   clinicAddress?: string;
 }
 
@@ -78,6 +84,8 @@ export const getAppointmentStatusTemplate = ({
   status,
   date,
   time,
+  doctorPublicId,
+  patientPublicId,
   clinicAddress,
 }: AppointmentStatusTemplateData): string => {
   const config = getStatusConfig(status, clinicName);
@@ -86,7 +94,10 @@ export const getAppointmentStatusTemplate = ({
   return getEmailWrapper(`
     <!-- Custom Header with Status Color -->
     <div style="background: linear-gradient(135deg, ${config.color} 0%, ${config.color}dd 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-      <img src="${logoUrl}" alt="${clinicName} Logo" style="height: 90px; margin-bottom: 10px; border-radius: 8px;" />
+      ${getEmailBrandBlock({
+        brandColor: "#ffffff",
+        subtitleColor: "rgba(255, 255, 255, 0.82)",
+      })}
       <h1 style="color: white; margin: 0; font-size: 24px;">Appointment ${statusFormatted}</h1>
     </div>
     
@@ -110,6 +121,7 @@ export const getAppointmentStatusTemplate = ({
       `
           : ""
       }
+      ${getReferenceBlock({ doctorPublicId, patientPublicId })}
     </div>
     ${getEmailFooter({ address: clinicAddress })}
   `);

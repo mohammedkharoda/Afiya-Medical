@@ -14,6 +14,7 @@ async function enrichAppointmentsWithDoctorPaymentDetails<T extends {
   doctorId?: string | null;
 }>(appointmentsList: T[]): Promise<(T & {
   doctorName: string | null;
+  doctorPublicId: string | null;
   doctorUpiId: string | null;
   doctorUpiQrCode: string | null;
 })[]> {
@@ -29,6 +30,7 @@ async function enrichAppointmentsWithDoctorPaymentDetails<T extends {
     return appointmentsList.map((appointment) => ({
       ...appointment,
       doctorName: null,
+      doctorPublicId: null,
       doctorUpiId: null,
       doctorUpiQrCode: null,
     }));
@@ -38,6 +40,7 @@ async function enrichAppointmentsWithDoctorPaymentDetails<T extends {
     .select({
       id: users.id,
       name: users.name,
+      publicId: doctorProfiles.publicId,
       upiId: doctorProfiles.upiId,
       upiQrCode: doctorProfiles.upiQrCode,
     })
@@ -48,11 +51,12 @@ async function enrichAppointmentsWithDoctorPaymentDetails<T extends {
   const doctorMap = new Map(
     doctorRows.map((doctor) => [
       doctor.id,
-      {
-        doctorName: doctor.name,
-        doctorUpiId: doctor.upiId,
-        doctorUpiQrCode: doctor.upiQrCode,
-      },
+        {
+          doctorName: doctor.name,
+          doctorPublicId: doctor.publicId,
+          doctorUpiId: doctor.upiId,
+          doctorUpiQrCode: doctor.upiQrCode,
+        },
     ]),
   );
 
@@ -61,6 +65,7 @@ async function enrichAppointmentsWithDoctorPaymentDetails<T extends {
       return {
         ...appointment,
         doctorName: null,
+        doctorPublicId: null,
         doctorUpiId: null,
         doctorUpiQrCode: null,
       };
@@ -71,6 +76,7 @@ async function enrichAppointmentsWithDoctorPaymentDetails<T extends {
     return {
       ...appointment,
       doctorName: doctorData?.doctorName ?? null,
+      doctorPublicId: doctorData?.doctorPublicId ?? null,
       doctorUpiId: doctorData?.doctorUpiId ?? null,
       doctorUpiQrCode: doctorData?.doctorUpiQrCode ?? null,
     };

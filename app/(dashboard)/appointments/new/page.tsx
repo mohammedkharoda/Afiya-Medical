@@ -39,10 +39,12 @@ interface UserData {
   email: string;
   name: string;
   role?: UserRole;
+  patientPublicId?: string | null;
 }
 
 interface PreferredDoctor {
   id: string;
+  publicId?: string | null;
   name: string;
   speciality: string;
   consultationFee?: number;
@@ -296,6 +298,11 @@ function AppointmentBookingContent() {
                     <p className="text-sm text-muted-foreground">
                       {preferredDoctor.speciality}
                     </p>
+                    {preferredDoctor.publicId ? (
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                        Doctor ID: {preferredDoctor.publicId}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
               ) : (

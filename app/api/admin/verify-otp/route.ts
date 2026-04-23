@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     const response = NextResponse.json({
       success: true,
       message: "Login successful",
-      redirectTo: "/dashboard",
+      redirectTo: "/admin/invitations",
     });
 
     response.cookies.set("better-auth.session_token", sessionToken, {

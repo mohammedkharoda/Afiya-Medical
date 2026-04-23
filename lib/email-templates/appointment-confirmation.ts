@@ -2,6 +2,7 @@
 
 import { EMAIL_CONFIG } from "./config";
 import { getEmailWrapper, getEmailHeader, getEmailFooter } from "./layout";
+import { getReferenceBlock } from "./reference";
 
 const {
   primaryColor,
@@ -18,6 +19,8 @@ interface AppointmentConfirmationTemplateData {
   date: string;
   time: string;
   doctorName: string;
+  doctorPublicId?: string;
+  patientPublicId?: string;
   clinicName: string;
   clinicAddress?: string;
 }
@@ -36,6 +39,8 @@ export const getAppointmentConfirmationTemplate = ({
   date,
   time,
   doctorName,
+  doctorPublicId,
+  patientPublicId,
   clinicName,
   clinicAddress,
 }: AppointmentConfirmationTemplateData): string => {
@@ -60,6 +65,7 @@ export const getAppointmentConfirmationTemplate = ({
       </div>
       
       <p style="color: ${textMuted}; font-size: 14px;">If you need to cancel or reschedule, please do so at least 24 hours in advance.</p>
+      ${getReferenceBlock({ doctorPublicId, patientPublicId })}
     </div>
     ${getEmailFooter({ address: clinicAddress })}
   `);

@@ -2,12 +2,15 @@
 
 import { EMAIL_CONFIG } from "./config";
 import { getEmailWrapper, getEmailHeader, getEmailFooter } from "./layout";
+import { getReferenceBlock } from "./reference";
 
 const { bgLight, borderColor } = EMAIL_CONFIG;
 
 interface BillingTemplateData {
   patientName: string;
   doctorName: string;
+  doctorPublicId?: string;
+  patientPublicId?: string;
   doctorSpeciality: string;
   appointmentDate: string;
   appointmentTime: string;
@@ -24,6 +27,8 @@ interface BillingTemplateData {
 export const getBillingTemplate = ({
   patientName,
   doctorName,
+  doctorPublicId,
+  patientPublicId,
   doctorSpeciality,
   appointmentDate,
   appointmentTime,
@@ -60,9 +65,6 @@ export const getBillingTemplate = ({
       <p style="margin: 0; color: #666; font-size: 14px;">You can also pay in cash at the clinic</p>
     </div>
   `);
-
-  // Primary button style
-  const buttonStyle = `display: inline-block; background-color: #495057; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;`;
 
   const content = `
     ${getEmailHeader("Consultation Invoice")}
@@ -120,6 +122,8 @@ export const getBillingTemplate = ({
     <p style="color: #666; font-size: 14px; line-height: 1.6;">
       If you have any questions about this invoice, please contact us.
     </p>
+    
+    ${getReferenceBlock({ doctorPublicId, patientPublicId })}
     
     ${getEmailFooter({ address: clinicAddress })}
   `;

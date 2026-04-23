@@ -41,23 +41,27 @@
       radial-gradient(circle at 20% 0%, rgba(61, 122, 122, 0.12), transparent 28%),
       radial-gradient(circle at 82% 14%, rgba(249, 177, 134, 0.14), transparent 24%),
       linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(245, 239, 228, 0.92)),
-      repeating-linear-gradient(
-        0deg,
+      repeating-linear-gradient(0deg,
         rgba(61, 122, 122, 0.02) 0,
         rgba(61, 122, 122, 0.02) 1px,
         transparent 1px,
-        transparent 30px
-      ),
-      repeating-linear-gradient(
-        90deg,
+        transparent 30px),
+      repeating-linear-gradient(90deg,
         rgba(61, 122, 122, 0.018) 0,
         rgba(61, 122, 122, 0.018) 1px,
         transparent 1px,
-        transparent 30px
-      );
+        transparent 30px);
     background-attachment: fixed;
     overflow-x: hidden;
     scroll-behavior: smooth;
+  }
+
+  img,
+  video,
+  canvas,
+  svg {
+    max-width: 100%;
+    height: auto;
   }
 
   a[href],
@@ -72,6 +76,12 @@
   h4 {
     font-family: var(--font-mluvka), system-ui, sans-serif;
     font-weight: 700;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    background-attachment: scroll;
   }
 }
 

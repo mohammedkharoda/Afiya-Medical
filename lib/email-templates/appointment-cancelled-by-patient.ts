@@ -2,6 +2,7 @@
 
 import { EMAIL_CONFIG } from "./config";
 import { getEmailWrapper, getEmailHeader, getEmailFooter } from "./layout";
+import { getReferenceBlock } from "./reference";
 
 const { primaryColor, errorColor, textSecondary, bgLight } = EMAIL_CONFIG;
 
@@ -11,6 +12,8 @@ interface AppointmentCancelledByPatientTemplateData {
   date: string;
   time: string;
   reason: string;
+  doctorPublicId?: string;
+  patientPublicId?: string;
   clinicAddress?: string;
 }
 
@@ -25,6 +28,8 @@ export const getAppointmentCancelledByPatientTemplate = ({
   date,
   time,
   reason,
+  doctorPublicId,
+  patientPublicId,
   clinicAddress,
 }: AppointmentCancelledByPatientTemplateData): string => {
   return getEmailWrapper(`
@@ -51,6 +56,7 @@ export const getAppointmentCancelledByPatientTemplate = ({
       </div>
 
       <p style="color: ${textSecondary}; font-size: 14px;">This time slot is now available for other patients.</p>
+      ${getReferenceBlock({ doctorPublicId, patientPublicId })}
     </div>
     ${getEmailFooter({ address: clinicAddress })}
   `);

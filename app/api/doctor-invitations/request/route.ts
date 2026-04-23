@@ -4,7 +4,10 @@ import { desc, eq, ilike } from "drizzle-orm";
 import { z } from "zod";
 import { db, doctorInvitations, users } from "@/lib/db";
 import { getAppBaseUrl } from "@/lib/app-url";
-import { sendDoctorInvitationEmail } from "@/lib/email";
+import {
+  sendDoctorInvitationEmail,
+  sendDoctorRegistrationRequestEmail,
+} from "@/lib/email";
 import { safeEmailSchema } from "@/lib/validations/auth";
 
 const INVITATION_EXPIRY_DAYS = 7;
@@ -103,7 +106,8 @@ export async function POST(req: NextRequest) {
       invitationId = invitation.id;
     }
 
-    const signupUrl = `${getAppBaseUrl(req)}/register/doctor?token=${token}`;
+    const baseUrl = getAppBaseUrl(req);
+    const signupUrl = `${baseUrl}/register/doctor?token=${token}`;
     const emailSent = await sendDoctorInvitationEmail(
       normalizedEmail,
       undefined,
@@ -115,6 +119,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "We could not send the registration email right now." },
         { status: 500 },
+      );
+    }
+
+    const adminNotificationSent = await sendDoctorRegistrationRequestEmail({
+      doctorEmail: normalizedEmail,
+      reviewUrl: `${baseUrl}/admin/invitations`,
+      reusedExistingInvitation,
+    });
+
+    if (!adminNotificationSent) {
+      console.warn(
+        `Doctor registration request admin email was not sent for ${normalizedEmail}`,
       );
     }
 
@@ -135,8 +151,12 @@ export async function POST(req: NextRequest) {
       "name" in error &&
       error.name === "ZodError"
     ) {
+      const zodError = error as { issues?: Array<{ message?: string }> };
       return NextResponse.json(
-        { error: "Please enter a valid email address." },
+        {
+          error:
+            zodError.issues?.[0]?.message || "Please enter a valid email address.",
+        },
         { status: 400 },
       );
     }

@@ -98,7 +98,7 @@ export default function AdminLoginPage() {
       }
 
       toast.success("Welcome, Admin!");
-      router.push(result.redirectTo || "/dashboard");
+      router.push(result.redirectTo || "/admin/invitations");
       router.refresh();
     } catch {
       toast.error("An unexpected error occurred");

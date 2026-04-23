@@ -19,6 +19,11 @@ export function PatientInfoSection({ appointment }: PatientInfoSectionProps) {
           {appointment.patient.user.name || "Unknown Patient"}
         </span>
       </div>
+      {appointment.patient.publicId ? (
+        <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+          Patient ID: {appointment.patient.publicId}
+        </div>
+      ) : null}
       {appointment.patient.user.phone && (
         <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
           <Phone size={12} className="shrink-0 sm:w-3.5 sm:h-3.5" />

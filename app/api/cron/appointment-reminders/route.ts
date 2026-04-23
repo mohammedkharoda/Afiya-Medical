@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { appointments, patientProfiles, users } from "@/lib/db/schema";
+import { appointments, patientProfiles } from "@/lib/db/schema";
 import { eq, and, gte, lt } from "drizzle-orm";
 import { sendAppointmentReminderEmail } from "@/lib/email";
 import { getDoctorById } from "@/lib/doctor";
@@ -138,6 +138,10 @@ export async function GET(req: NextRequest) {
             doctor?.name || "Doctor",
             CLINIC_NAME,
             doctor?.clinicAddress || undefined,
+            {
+              doctorPublicId: doctor?.publicId || undefined,
+              patientPublicId: patientProfile.publicId,
+            },
           );
 
           if (emailSent) {
