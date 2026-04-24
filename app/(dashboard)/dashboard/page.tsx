@@ -24,21 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-interface Appointment {
-  id: string;
-  appointmentDate: string;
-  appointmentTime: string;
-  status: string;
-  symptoms?: string;
-  notes?: string;
-  patient?: {
-    user?: {
-      name?: string;
-      email?: string;
-      phone?: string;
-    };
-  };
-}
+import type { Appointment } from "@/lib/types";
 
 export default function DashboardPage() {
   const router = useRouter();

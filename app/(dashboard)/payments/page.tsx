@@ -17,42 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/lib/auth-client";
-
-interface Appointment {
-  id: string;
-  appointmentDate: string;
-  appointmentTime: string;
-  status: string;
-  paymentStatus: string;
-  symptoms?: string;
-  patient?: {
-    user?: {
-      name?: string;
-    };
-  };
-}
-
-interface Payment {
-  id: string;
-  amount: number;
-  status: string;
-  paymentMethod: string;
-  paidAt: string | null;
-  createdAt: string;
-  appointment?: {
-    id: string;
-    appointmentDate: string;
-    appointmentTime: string;
-    status: string;
-    paymentStatus: string;
-    symptoms?: string;
-    patient?: {
-      user?: {
-        name?: string;
-      };
-    };
-  };
-}
+import type { Appointment, Payment } from "@/lib/types";
 
 // Standard consultation fee - could be fetched from settings later
 const CONSULTATION_FEE = 500;

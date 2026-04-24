@@ -1,222 +1,120 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  db,
-  appointments,
-  payments,
-  users,
-  doctorProfiles,
-} from "@/lib/db";
+import { db, appointments, payments, users, doctorProfiles } from "@/lib/db";
 import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
+import {
+  withAuth,
+  requireRole,
+  getAppointmentWithPatient,
+  fireAppointmentUpdate,
+  notFound,
+  badRequest,
+} from "@/lib/api";
 import { sendBillingEmail } from "@/lib/email";
 import { format } from "date-fns";
-import { triggerAppointmentUpdate } from "@/lib/pusher";
 import { notifyPatientAppointmentStatusChange } from "@/lib/notifications";
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const session = await auth.api.getSession({
-      headers: req.headers,
-    });
+export const POST = withAuth(async (req, session, { id: appointmentId }) => {
+  const roleError = requireRole(session, "DOCTOR", "ADMIN");
+  if (roleError) return roleError;
 
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const { consultationFee, paymentMethod = "CASH", isPaid = false, notes } = await req.json();
 
-    // Only doctors and admins can complete appointments
-    if (session.user.role !== "DOCTOR" && session.user.role !== "ADMIN") {
-      return NextResponse.json(
-        { error: "Only doctors can complete appointments" },
-        { status: 403 },
-      );
-    }
+  if (!consultationFee || consultationFee <= 0) {
+    return badRequest("Valid consultation fee is required");
+  }
 
-    const body = await req.json();
-    const {
-      consultationFee,
-      paymentMethod = "CASH",
-      isPaid = false,
-      notes,
-    } = body;
+  const appointment = await getAppointmentWithPatient(appointmentId);
+  if (!appointment) return notFound("Appointment");
 
-    if (!consultationFee || consultationFee <= 0) {
-      return NextResponse.json(
-        { error: "Valid consultation fee is required" },
-        { status: 400 },
-      );
-    }
+  if (appointment.status !== "SCHEDULED") {
+    return badRequest("Only scheduled appointments can be completed");
+  }
 
-    const { id: appointmentId } = await params;
+  const doctorId = appointment.doctorId || session.user.id;
+  const [doctor, doctorProfile] = await Promise.all([
+    db.query.users.findFirst({ where: eq(users.id, doctorId) }),
+    db.query.doctorProfiles.findFirst({ where: eq(doctorProfiles.userId, doctorId) }),
+  ]);
 
-    // Get the appointment with patient details
-    const appointment = await db.query.appointments.findFirst({
-      where: eq(appointments.id, appointmentId),
-      with: {
-        patient: {
-          with: {
-            user: true,
-          },
-        },
-      },
-    });
+  const isVideoConsultation = appointment.isVideoConsultation;
 
-    if (!appointment) {
-      return NextResponse.json(
-        { error: "Appointment not found" },
-        { status: 404 },
-      );
-    }
+  await db
+    .update(appointments)
+    .set({ status: "COMPLETED", updatedAt: new Date() })
+    .where(eq(appointments.id, appointmentId));
 
-    if (appointment.status !== "SCHEDULED") {
-      return NextResponse.json(
-        { error: "Only scheduled appointments can be completed" },
-        { status: 400 },
-      );
-    }
+  let payment;
 
-    // Get doctor profile for billing details
-    const doctorId = appointment.doctorId || session.user.id;
-    const doctor = await db.query.users.findFirst({
-      where: eq(users.id, doctorId),
-    });
-    const doctorProfile = await db.query.doctorProfiles.findFirst({
-      where: eq(doctorProfiles.userId, doctorId),
-    });
+  if (isVideoConsultation) {
+    [payment] = await db
+      .insert(payments)
+      .values({
+        appointmentId,
+        amount: appointment.remainingAmount || consultationFee * 0.5,
+        paymentMethod: "UPI_MANUAL",
+        status: "PENDING",
+        notes: "Remaining payment (50%) for video consultation - Pay to doctor's UPI ID",
+        verifiedByDoctor: false,
+      })
+      .returning();
 
-    const isVideoConsultation = appointment.isVideoConsultation;
-
-    // Update appointment status to COMPLETED
     await db
       .update(appointments)
-      .set({
-        status: "COMPLETED",
-        updatedAt: new Date(),
-      })
+      .set({ paymentStatus: "PENDING", prescriptionWithheld: true, prescriptionSent: false, billSent: false })
       .where(eq(appointments.id, appointmentId));
+  } else {
+    [payment] = await db
+      .insert(payments)
+      .values({
+        appointmentId,
+        amount: consultationFee,
+        paymentMethod,
+        status: isPaid ? "PAID" : "PENDING",
+        paidAt: isPaid ? new Date() : null,
+        notes,
+      })
+      .returning();
 
-    // Handle payment based on consultation type
-    let payment;
-
-    if (isVideoConsultation) {
-      // For video consultations, create remaining payment record (50%)
-      // Prescription will be withheld until this payment is verified
-      [payment] = await db
-        .insert(payments)
-        .values({
-          appointmentId,
-          amount: appointment.remainingAmount || (consultationFee * 0.5),
-          paymentMethod: "UPI_MANUAL",
-          status: "PENDING",
-          notes: `Remaining payment (50%) for video consultation - Pay to doctor's UPI ID`,
-          verifiedByDoctor: false,
-        })
-        .returning();
-
-      // Update appointment - prescription withheld until remaining payment verified
-      await db
-        .update(appointments)
-        .set({
-          paymentStatus: "PENDING",
-          prescriptionWithheld: true,
-          prescriptionSent: false,
-          billSent: false, // Don't send bill yet, will send after payment
-        })
-        .where(eq(appointments.id, appointmentId));
-    } else {
-      // For regular appointments, create normal payment record
-      [payment] = await db
-        .insert(payments)
-        .values({
-          appointmentId,
-          amount: consultationFee,
-          paymentMethod,
-          status: isPaid ? "PAID" : "PENDING",
-          paidAt: isPaid ? new Date() : null,
-          notes,
-        })
-        .returning();
-
-      // Update appointment payment status
-      await db
-        .update(appointments)
-        .set({
-          paymentStatus: isPaid ? "PAID" : "PENDING",
-          billSent: true,
-          billSentAt: new Date(),
-        })
-        .where(eq(appointments.id, appointmentId));
-    }
-
-    // Trigger real-time update via Pusher for patient sync
-    triggerAppointmentUpdate({
-      id: appointmentId,
-      status: "COMPLETED",
-      patientId: appointment.patientId,
-    }).catch((err) =>
-      console.error("Error triggering appointment update:", err),
-    );
-
-    // Notify patient about appointment completion
-    const patientUserId = appointment.patient?.user?.id;
-    if (patientUserId) {
-      const formattedDate = format(
-        new Date(appointment.appointmentDate),
-        "MMMM d, yyyy",
-      );
-      notifyPatientAppointmentStatusChange(
-        patientUserId,
-        "COMPLETED",
-        formattedDate,
-        appointment.appointmentTime,
-        doctorId,
-      ).catch((err) =>
-        console.error("Error notifying patient of completion:", err),
-      );
-    }
-
-    // Send billing email to patient if not already paid (skip for video consultations - will send after remaining payment)
-    if (!isPaid && !isVideoConsultation && appointment.patient?.user?.email) {
-      const billingData = {
-        patientEmail: appointment.patient.user.email,
-        patientName: appointment.patient.user.name,
-        patientPublicId: appointment.patient.publicId,
-        doctorName: doctor?.name || "Doctor",
-        doctorPublicId: doctorProfile?.publicId || undefined,
-        doctorSpeciality: doctorProfile?.speciality || "General Physician",
-        appointmentDate: format(
-          new Date(appointment.appointmentDate),
-          "dd MMM yyyy",
-        ),
-        appointmentTime: appointment.appointmentTime,
-        consultationFee: consultationFee,
-        upiId: doctorProfile?.upiId || undefined,
-        upiQrCode: doctorProfile?.upiQrCode || undefined,
-        symptoms: appointment.symptoms,
-        clinicAddress: doctorProfile?.clinicAddress || undefined,
-      };
-
-      // Send billing email (don't await to avoid blocking response)
-      sendBillingEmail(billingData).catch((err) =>
-        console.error("Error sending billing email:", err),
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      appointment: {
-        id: appointmentId,
-        status: "COMPLETED",
-      },
-      payment,
-    });
-  } catch (error) {
-    console.error("Error completing appointment:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    await db
+      .update(appointments)
+      .set({ paymentStatus: isPaid ? "PAID" : "PENDING", billSent: true, billSentAt: new Date() })
+      .where(eq(appointments.id, appointmentId));
   }
-}
+
+  fireAppointmentUpdate({ id: appointmentId, status: "COMPLETED", patientId: appointment.patientId });
+
+  const patientUserId = appointment.patient?.user?.id;
+  if (patientUserId) {
+    notifyPatientAppointmentStatusChange(
+      patientUserId,
+      "COMPLETED",
+      format(new Date(appointment.appointmentDate), "MMMM d, yyyy"),
+      appointment.appointmentTime,
+      doctorId,
+    ).catch((err) => console.error("Error notifying patient of completion:", err));
+  }
+
+  if (!isPaid && !isVideoConsultation && appointment.patient?.user?.email) {
+    sendBillingEmail({
+      patientEmail: appointment.patient.user.email,
+      patientName: appointment.patient.user.name,
+      patientPublicId: appointment.patient.publicId,
+      doctorName: doctor?.name || "Doctor",
+      doctorPublicId: doctorProfile?.publicId || undefined,
+      doctorSpeciality: doctorProfile?.speciality || "General Physician",
+      appointmentDate: format(new Date(appointment.appointmentDate), "dd MMM yyyy"),
+      appointmentTime: appointment.appointmentTime,
+      consultationFee,
+      upiId: doctorProfile?.upiId || undefined,
+      upiQrCode: doctorProfile?.upiQrCode || undefined,
+      symptoms: appointment.symptoms,
+      clinicAddress: doctorProfile?.clinicAddress || undefined,
+    }).catch((err) => console.error("Error sending billing email:", err));
+  }
+
+  return NextResponse.json({
+    success: true,
+    appointment: { id: appointmentId, status: "COMPLETED" },
+    payment,
+  });
+});

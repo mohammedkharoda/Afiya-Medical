@@ -15,7 +15,6 @@ import {
   Clock,
   Activity,
   CheckCircle,
-  Loader2,
   Stethoscope,
   HeartPulse,
   Syringe,
@@ -35,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageSpinner } from "@/components/ui/spinner";
 
 interface PatientDetails {
   id: string;
@@ -175,11 +175,7 @@ export default function PatientDetailPage({
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   if (!patient) {

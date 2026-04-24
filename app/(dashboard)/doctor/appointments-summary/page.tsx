@@ -16,21 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Calendar, CheckCircle, Clock, RefreshCw, Users } from "lucide-react";
 
-interface Appointment {
-  id: string;
-  appointmentDate: string;
-  status: string;
-  patient?: {
-    address?: string;
-    user?: {
-      name?: string;
-      phone?: string;
-    };
-  };
-  prescription?: {
-    followUpDate?: string | null;
-  };
-}
+import type { Appointment } from "@/lib/types";
+import { PageSpinner } from "@/components/ui/spinner";
 
 export default function DoctorAppointmentsSummaryPage() {
   useSession();
@@ -136,11 +123,7 @@ export default function DoctorAppointmentsSummaryPage() {
   }, [appointments, month]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   return (

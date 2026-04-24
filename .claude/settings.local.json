@@ -36,7 +36,8 @@
       "Bash(npx dotenv:*)",
       "Bash(node:*)",
       "Bash(NODE_OPTIONS=\"--env-file=.env\" npx tsx:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(xargs grep *)"
     ]
   }
 }

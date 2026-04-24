@@ -44,6 +44,7 @@ import {
   AlertCircle,
   FlaskConical,
   ShieldCheck,
+  Info,
 } from "lucide-react";
 import {
   Select,
@@ -232,15 +233,6 @@ export default function RegisterPage() {
   };
 
   const onSubmit = async (data: RegisterInput) => {
-    if (!selectedDoctor) {
-      toast.error("Please select a doctor to continue");
-      const doctorSection = document.getElementById("doctor-selection");
-      if (doctorSection) {
-        doctorSection.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-      return;
-    }
-
     if (!captchaToken) {
       toast.error("Please complete the captcha to continue");
       return;
@@ -256,7 +248,7 @@ export default function RegisterPage() {
         },
         body: JSON.stringify({
           ...data,
-          preferredDoctorId: selectedDoctor,
+          preferredDoctorId: selectedDoctor || undefined,
           captchaToken,
         }),
         credentials: "include",
@@ -863,7 +855,7 @@ export default function RegisterPage() {
                     <h3 className="mt-2 flex items-center gap-2 text-xl font-semibold text-foreground">
                       <Stethoscope size={20} className="text-primary" />
                       Select Your Preferred Doctor
-                      <span className="text-destructive">*</span>
+                      <span className="ml-1 text-sm font-normal text-muted-foreground">(Optional)</span>
                     </h3>
                   </div>
                   <p className="max-w-xl text-sm leading-6 text-[#60707d]">
@@ -880,13 +872,19 @@ export default function RegisterPage() {
                     </span>
                   </div>
                 ) : doctors.length === 0 ? (
-                  <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5 text-orange-600" />
-                      <p className="text-sm text-orange-800 font-medium">
-                        No doctors available at the moment. Please try again
-                        later.
-                      </p>
+                  <div className="rounded-[1.4rem] border border-[#c8dde8] bg-[#f0f7fb]/80 p-5 space-y-2">
+                    <div className="flex items-start gap-3">
+                      <Stethoscope className="h-5 w-5 text-[#3b7ea1] mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-[#1e4f6b]">
+                          No doctors are listed yet — you can still join!
+                        </p>
+                        <p className="text-sm text-[#3a6278] mt-1 leading-6">
+                          Create your account now. Once a doctor is available,
+                          you can assign your preferred doctor from your patient
+                          dashboard.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -1127,7 +1125,7 @@ export default function RegisterPage() {
                     )}
 
                     {/* Selected Doctor Confirmation */}
-                    {selectedDoctor && (
+                    {selectedDoctor ? (
                       <>
                         <div className="mt-4 rounded-[1.2rem] border border-green-200 bg-green-50 p-4">
                           <p className="text-sm text-green-800 flex items-center gap-2">
@@ -1160,6 +1158,14 @@ export default function RegisterPage() {
                           </div>
                         )}
                       </>
+                    ) : (
+                      <div className="mt-4 rounded-[1.2rem] border border-[#d8c5a8] bg-white/70 p-4">
+                        <p className="text-sm text-muted-foreground flex items-center gap-2">
+                          <Info size={15} className="shrink-0 text-muted-foreground" />
+                          No doctor selected. You can assign one from your
+                          dashboard after signing up.
+                        </p>
+                      </div>
                     )}
                   </>
                 )}
@@ -1186,7 +1192,7 @@ export default function RegisterPage() {
                   type="submit"
                   size="lg"
                   className="h-13 w-full rounded-[1rem] border border-[#c7b08a] bg-[linear-gradient(180deg,#203645_0%,#152633_100%)] text-base font-semibold text-white shadow-[0_18px_30px_-24px_rgba(15,23,42,0.9),0_1px_0_rgba(255,255,255,0.08)_inset] transition-all hover:-translate-y-0.5 hover:border-[#b79b6f] hover:bg-[linear-gradient(180deg,#274152_0%,#182a37_100%)] active:translate-y-0 disabled:border-[#d8ccb8] disabled:bg-[linear-gradient(180deg,#efe7d8_0%,#e4d8c4_100%)] disabled:text-[#8a7f6b] disabled:shadow-none"
-                  disabled={loading || !selectedDoctor || !captchaSiteKey}
+                  disabled={loading || !captchaSiteKey}
                 >
                   {loading ? "Creating account..." : "Create your account"}
                 </Button>

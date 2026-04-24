@@ -9,10 +9,10 @@ import {
   Phone,
   Mail,
   ChevronRight,
-  Loader2,
   User as UserIcon,
   BriefcaseMedical,
 } from "lucide-react";
+import { PageSpinner } from "@/components/ui/spinner";
 import {
   Card,
   CardContent,
@@ -134,9 +134,7 @@ export default function PatientsPage() {
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
+            <PageSpinner />
           ) : filteredPatients.length === 0 ? (
             <div className="py-12 text-center">
               <UserIcon className="mx-auto h-12 w-12 text-muted-foreground/50" />

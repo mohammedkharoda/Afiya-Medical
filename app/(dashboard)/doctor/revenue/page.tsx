@@ -15,13 +15,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
-  Loader2,
   TrendingUp,
   DollarSign,
   Calendar,
   Download,
   IndianRupee,
 } from "lucide-react";
+import { PageSpinner } from "@/components/ui/spinner";
 import { format } from "date-fns";
 
 interface RevenueData {
@@ -152,11 +152,7 @@ export default function RevenuePage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <PageSpinner />;
   }
 
   // Create default empty data if no revenue data
